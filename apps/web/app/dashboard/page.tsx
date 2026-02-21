@@ -110,6 +110,7 @@ export default function DashboardPage() {
     () => students.find((student) => student.id === selectedStudentId) ?? null,
     [selectedStudentId, students],
   );
+  const isStudent = session?.user.role === 'STUDENT';
 
   if (loading || !session) {
     return null;
@@ -117,79 +118,83 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      {session.user.role === 'STUDENT' ? (
+      {isStudent ? (
         <div className="mb-6">
           <StudentExercisePanel />
         </div>
       ) : null}
 
-      <div className="grid gap-5 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>Clases activas</CardDescription>
-            <CardTitle className="text-4xl">{totalClasses}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Alumnos visibles</CardDescription>
-            <CardTitle className="text-4xl">{totalStudents}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Rol de acceso</CardDescription>
-            <CardTitle className="text-2xl">
-              {ROLE_LABELS[session.user.role] ?? session.user.role}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      {!isStudent ? (
+        <>
+          <div className="grid gap-5 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardDescription>Clases activas</CardDescription>
+                <CardTitle className="text-4xl">{totalClasses}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardDescription>Alumnos visibles</CardDescription>
+                <CardTitle className="text-4xl">{totalStudents}</CardTitle>
+              </CardHeader>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardDescription>Rol de acceso</CardDescription>
+                <CardTitle className="text-2xl">
+                  {ROLE_LABELS[session.user.role] ?? session.user.role}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Clases</CardTitle>
-            <CardDescription>Acceso rápido a detalles</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {classes.map((item) => (
-              <Link
-                key={item.id}
-                href={`/classes/${item.id}`}
-                className="block rounded-xl border border-cyan-100 bg-cyan-50 p-3 transition-colors hover:bg-cyan-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-              >
-                <p className="font-bold text-slate-800 dark:text-slate-100">{item.name}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-300">{item._count?.enrollments ?? 0} alumnos</p>
-              </Link>
-            ))}
-            {classes.length === 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">No hay clases para este usuario.</p> : null}
-          </CardContent>
-        </Card>
+          <div className="mt-6 grid gap-5 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Clases</CardTitle>
+                <CardDescription>Acceso rápido a detalles</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {classes.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/classes/${item.id}`}
+                    className="block rounded-xl border border-cyan-100 bg-cyan-50 p-3 transition-colors hover:bg-cyan-100 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  >
+                    <p className="font-bold text-slate-800 dark:text-slate-100">{item.name}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{item._count?.enrollments ?? 0} alumnos</p>
+                  </Link>
+                ))}
+                {classes.length === 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">No hay clases para este usuario.</p> : null}
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Alumnos</CardTitle>
-            <CardDescription>Selecciona para ver progreso</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {students.map((student) => (
-              <Link
-                key={student.id}
-                href={`/students/${student.id}`}
-                className="flex items-center justify-between rounded-xl border border-sky-100 bg-white p-3 transition-colors hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-              >
-                <div>
-                  <p className="font-semibold text-slate-800 dark:text-slate-100">{student.fullName}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300">{student.email}</p>
-                </div>
-                <Badge>Ver detalle</Badge>
-              </Link>
-            ))}
-            {students.length === 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">No hay alumnos cargados.</p> : null}
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Alumnos</CardTitle>
+                <CardDescription>Selecciona para ver progreso</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {students.map((student) => (
+                  <Link
+                    key={student.id}
+                    href={`/students/${student.id}`}
+                    className="flex items-center justify-between rounded-xl border border-sky-100 bg-white p-3 transition-colors hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{student.fullName}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{student.email}</p>
+                    </div>
+                    <Badge>Ver detalle</Badge>
+                  </Link>
+                ))}
+                {students.length === 0 ? <p className="text-sm text-slate-600 dark:text-slate-300">No hay alumnos cargados.</p> : null}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : null}
 
       {session.user.role === 'STUDENT' || students.length > 0 ? (
         <>
@@ -232,10 +237,10 @@ export default function DashboardPage() {
                 title="Tiempo medio"
                 description="Segundos por intento del alumno seleccionado"
                 color="#0369a1"
-                metric="avgResponseMs"
+                metric="avgResponseSeconds"
                 data={analytics.timeSeries.map((item) => ({
                   ...item,
-                  avgResponseMs: toSeconds(item.avgResponseMs),
+                  avgResponseSeconds: toSeconds(item.avgResponseMs),
                 }))}
               />
             </div>

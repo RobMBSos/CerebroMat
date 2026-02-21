@@ -10,7 +10,7 @@ export const startSessionSchema = z.object({
   ageGroup: z.enum(AGE_GROUPS),
   mode: z.enum(EXERCISE_MODES),
   categories: z.array(z.enum(EXERCISE_CATEGORIES)).min(1),
-  totalExercises: z.number().int().min(1).max(30).default(DEFAULT_SESSION_EXERCISES),
+  totalExercises: z.number().int().min(1).max(50).default(DEFAULT_SESSION_EXERCISES),
 });
 
 export const finishSessionSchema = z.object({

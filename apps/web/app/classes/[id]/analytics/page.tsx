@@ -233,10 +233,10 @@ export default function ClassAnalyticsPage() {
             title="Tiempo medio de clase"
             description="Segundos por intento"
             color="#0369a1"
-            metric="avgResponseMs"
+            metric="avgResponseSeconds"
             data={data.timeSeries.map((item) => ({
               ...item,
-              avgResponseMs: toSeconds(item.avgResponseMs),
+              avgResponseSeconds: toSeconds(item.avgResponseMs),
             }))}
           />
         </div>

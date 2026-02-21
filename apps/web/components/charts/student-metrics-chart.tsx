@@ -14,9 +14,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 type SeriesPoint = {
   period: string;
   accuracy?: number;
-  avgResponseMs?: number;
+  avgResponseSeconds?: number;
   avgLevel?: number;
 };
+
+type Metric = 'accuracy' | 'avgResponseSeconds' | 'avgLevel';
+
+function formatMetricValue(metric: Metric, value: number): string {
+  if (metric === 'accuracy') {
+    return `${Math.round(value * 100)}%`;
+  }
+
+  if (metric === 'avgResponseSeconds') {
+    return `${value.toFixed(1)} s`;
+  }
+
+  return value.toFixed(2);
+}
+
+function metricLabel(metric: Metric): string {
+  if (metric === 'accuracy') return 'Precisión';
+  if (metric === 'avgResponseSeconds') return 'Tiempo medio';
+  return 'Nivel medio';
+}
 
 export function StudentMetricsChart({
   title,
@@ -29,7 +49,7 @@ export function StudentMetricsChart({
   title: string;
   description: string;
   color: string;
-  metric: 'accuracy' | 'avgResponseMs' | 'avgLevel';
+  metric: Metric;
   data: SeriesPoint[];
   yDomain?: [number, number];
 }) {
@@ -45,7 +65,11 @@ export function StudentMetricsChart({
             <LineChart data={data} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="4 4" stroke="var(--chart-grid)" />
               <XAxis dataKey="period" tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
-              <YAxis domain={yDomain} tick={{ fill: 'var(--chart-axis)', fontSize: 12 }} />
+              <YAxis
+                domain={yDomain}
+                tick={{ fill: 'var(--chart-axis)', fontSize: 12 }}
+                tickFormatter={(value) => formatMetricValue(metric, Number(value))}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: 'var(--chart-tooltip-bg)',
@@ -53,6 +77,10 @@ export function StudentMetricsChart({
                   borderRadius: '0.75rem',
                 }}
                 labelStyle={{ color: 'var(--chart-axis)' }}
+                formatter={(value) => [
+                  formatMetricValue(metric, Number(value ?? 0)),
+                  metricLabel(metric),
+                ]}
               />
               <Line type="monotone" dataKey={metric} stroke={color} strokeWidth={3} dot={false} />
             </LineChart>

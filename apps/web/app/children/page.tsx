@@ -4,7 +4,14 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { useRoleGuard } from '@/hooks/use-role-guard';
 import { apiRequest } from '@/lib/api';
@@ -43,6 +50,11 @@ type OverviewResponse = {
   }>;
 };
 
+type ClassItem = {
+  id: string;
+  name: string;
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   ADDITION: 'Suma',
   SUBTRACTION: 'Resta',
@@ -64,20 +76,95 @@ export default function ChildrenPage() {
     'TEACHER',
     'PARENT',
   ]);
+
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
+  const [classes, setClasses] = useState<ClassItem[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const teacherOrAdmin =
+    session?.user.role === 'TEACHER' || session?.user.role === 'ADMIN';
+
+  useEffect(() => {
+    if (!session || !teacherOrAdmin) {
+      return;
+    }
+
+    async function loadClasses() {
+      try {
+        setError(null);
+        const data = await apiRequest<Array<{ id: string; name: string }>>(
+          '/classes',
+          {
+            auth: true,
+          },
+        );
+
+        const sorted = data
+          .map((item) => ({ id: item.id, name: item.name }))
+          .sort((left, right) =>
+            left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
+          );
+
+        setClasses(sorted);
+        setSelectedClassId((current) => {
+          if (current && sorted.some((item) => item.id === current)) {
+            return current;
+          }
+          return sorted[0]?.id ?? '';
+        });
+      } catch (requestError) {
+        setError(
+          requestError instanceof Error
+            ? requestError.message
+            : 'No se pudieron cargar las clases',
+        );
+      }
+    }
+
+    void loadClasses();
+  }, [session, teacherOrAdmin]);
 
   useEffect(() => {
     if (!session) {
       return;
     }
 
+    if (teacherOrAdmin) {
+      if (classes.length === 0) {
+        setOverview({
+          summary: {
+            studentCount: 0,
+            totalAttempts: 0,
+            correctAttempts: 0,
+            incorrectAttempts: 0,
+            overallAccuracy: 0,
+          },
+          students: [],
+        });
+        return;
+      }
+
+      if (!selectedClassId) {
+        return;
+      }
+    }
+
     async function loadOverview() {
       try {
         setError(null);
-        const data = await apiRequest<OverviewResponse>('/students/overview', {
-          auth: true,
-        });
+        const query =
+          teacherOrAdmin && selectedClassId
+            ? `?classId=${selectedClassId}`
+            : '';
+
+        const data = await apiRequest<OverviewResponse>(
+          `/students/overview${query}`,
+          {
+            auth: true,
+          },
+        );
+
         setOverview(data);
       } catch (requestError) {
         setError(
@@ -89,7 +176,12 @@ export default function ChildrenPage() {
     }
 
     void loadOverview();
-  }, [session]);
+  }, [classes.length, selectedClassId, session, teacherOrAdmin]);
+
+  const selectedClass = useMemo(
+    () => classes.find((item) => item.id === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  );
 
   const groupedByClass = useMemo(() => {
     const groups = new Map<
@@ -110,6 +202,7 @@ export default function ChildrenPage() {
           current.students.push(row);
           continue;
         }
+
         groups.set(classroom.id, {
           id: classroom.id,
           name: classroom.name,
@@ -118,7 +211,7 @@ export default function ChildrenPage() {
       }
     }
 
-    const classes = Array.from(groups.values())
+    const groupedClasses = Array.from(groups.values())
       .map((item) => ({
         ...item,
         students: item.students.sort((left, right) =>
@@ -132,7 +225,7 @@ export default function ChildrenPage() {
       );
 
     return {
-      classes,
+      classes: groupedClasses,
       withoutClass: withoutClass.sort((left, right) =>
         left.student.fullName.localeCompare(right.student.fullName, 'es', {
           sensitivity: 'base',
@@ -145,12 +238,44 @@ export default function ChildrenPage() {
     return null;
   }
 
-  const teacherOrAdmin =
-    session.user.role === 'TEACHER' || session.user.role === 'ADMIN';
-  const heading = session.user.role === 'PARENT' ? 'Mis hijos' : 'Resumen de alumnos';
+  const heading =
+    session.user.role === 'PARENT' ? 'Mis hijos' : 'Resumen de alumnos';
 
   return (
     <AppShell>
+      {teacherOrAdmin ? (
+        <Card className="mb-5">
+          <CardHeader>
+            <CardTitle>Clase seleccionada</CardTitle>
+            <CardDescription>
+              Elige clase y mostramos solo sus alumnos para evitar listas
+              demasiado largas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {classes.length > 0 ? (
+              <Select
+                value={selectedClassId}
+                onChange={(event) => setSelectedClassId(event.target.value)}
+                options={classes.map((item) => ({
+                  value: item.id,
+                  label: item.name,
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                No hay clases disponibles para mostrar alumnos.
+              </p>
+            )}
+            {selectedClass ? (
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Mostrando: {selectedClass.name}
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <CardTitle>{heading}</CardTitle>
@@ -175,7 +300,7 @@ export default function ChildrenPage() {
                 Clases
               </p>
               <p className="text-3xl font-black text-slate-800 dark:text-slate-100">
-                {groupedByClass.classes.length}
+                {classes.length}
               </p>
             </div>
           ) : null}
@@ -203,8 +328,7 @@ export default function ChildrenPage() {
           <CardHeader>
             <CardTitle>Alumnos por clase</CardTitle>
             <CardDescription>
-              Vista organizada por clase para detectar rápido qué grupo necesita
-              más refuerzo.
+              Listado de la clase seleccionada.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { getSpeedTipForCategory } from '@cerebromat/shared';
 import { AppShell } from '@/components/app-shell';
 import { StudentMetricsChart } from '@/components/charts/student-metrics-chart';
 import { Badge } from '@/components/ui/badge';
@@ -148,6 +149,13 @@ export default function StudentDetailPage() {
     })
     .slice(0, 3);
 
+  const specialHelp = weakestCategories
+    .filter((item) => item.incorrect > 0)
+    .map((item) => ({
+      ...item,
+      tip: getSpeedTipForCategory(item.category),
+    }));
+
   return (
     <AppShell>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
@@ -258,10 +266,10 @@ export default function StudentDetailPage() {
             title="Tiempo"
             description="Segundos por intento"
             color="#0284c7"
-            metric="avgResponseMs"
+            metric="avgResponseSeconds"
             data={analytics.timeSeries.map((item) => ({
               ...item,
-              avgResponseMs: toSeconds(item.avgResponseMs),
+              avgResponseSeconds: toSeconds(item.avgResponseMs),
             }))}
           />
           <StudentMetricsChart
@@ -299,6 +307,34 @@ export default function StudentDetailPage() {
           ) : (
             <p className="text-sm text-slate-600 dark:text-slate-300">
               No hay suficientes datos para detectar áreas de refuerzo.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle>Ayuda especial</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          {specialHelp.length > 0 ? (
+            specialHelp.map((item) => (
+              <div
+                key={`tip-${item.category}`}
+                className="rounded-xl border border-cyan-200 bg-cyan-50 p-3 dark:border-cyan-900 dark:bg-cyan-950/30"
+              >
+                <p className="text-sm font-black text-cyan-900 dark:text-cyan-200">
+                  {CATEGORY_LABELS[item.category] ?? item.category}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-cyan-700 dark:text-cyan-300">
+                  Fallos: {item.incorrect} / {item.attempts}
+                </p>
+                <p className="mt-1 text-xs text-cyan-800 dark:text-cyan-200">{item.tip}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              No hay fallos relevantes en el rango seleccionado.
             </p>
           )}
         </CardContent>

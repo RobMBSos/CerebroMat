@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getSpeedTipForCategory } from '@cerebromat/shared';
 import { Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
 import { useAuth } from '@/lib/auth';
 import { MiniBarChart } from '@/components/bar-chart';
@@ -152,6 +153,17 @@ export default function ProgressTab() {
     [history],
   );
 
+  const specialHelp = useMemo(
+    () =>
+      weakestCategories
+        .filter((item) => item.incorrect > 0)
+        .map((item) => ({
+          ...item,
+          tip: getSpeedTipForCategory(item.category),
+        })),
+    [weakestCategories],
+  );
+
   const recentAttempts = useMemo(() => (history ? history.attempts.slice(0, 12) : []), [history]);
 
   if (!session) {
@@ -236,6 +248,40 @@ export default function ProgressTab() {
                 ))
               ) : (
                 <Text style={{ color: '#475569' }}>Todavía no hay datos suficientes.</Text>
+              )}
+            </View>
+
+            <View style={{ backgroundColor: '#ffffff', borderRadius: 18, padding: 16, gap: 8 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#0f172a' }}>Ayuda especial</Text>
+              <Text style={{ color: '#334155', fontSize: 13 }}>
+                Consejos concretos según en qué está fallando más.
+              </Text>
+              {specialHelp.length > 0 ? (
+                specialHelp.map((item) => (
+                  <View
+                    key={`tip-${item.category}`}
+                    style={{
+                      backgroundColor: '#ecfeff',
+                      borderColor: '#67e8f9',
+                      borderWidth: 1,
+                      borderRadius: 12,
+                      padding: 10,
+                      gap: 5,
+                    }}
+                  >
+                    <Text style={{ color: '#155e75', fontWeight: '800' }}>
+                      {CATEGORY_LABELS[item.category] ?? item.category}
+                    </Text>
+                    <Text style={{ color: '#164e63', fontSize: 12 }}>
+                      Fallos recientes: {item.incorrect} / {item.attempts}
+                    </Text>
+                    <Text style={{ color: '#0e7490', fontSize: 13, fontWeight: '700' }}>{item.tip}</Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ color: '#475569' }}>
+                  Sin fallos relevantes en este rango. Muy bien.
+                </Text>
               )}
             </View>
 

@@ -1,15 +1,17 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { evaluateSpeedTip } from '@cerebromat/shared';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/api';
 
 type AgeGroup = 'INFANT_3_5' | 'AGE_6_7' | 'AGE_8_9' | 'AGE_10_12';
 type Mode = 'OPERATIONS' | 'WORD_PROBLEMS' | 'MIXED';
 type Category = 'ADDITION' | 'SUBTRACTION' | 'MULTIPLICATION' | 'DIVISION' | 'WORD_PROBLEM';
-type PromptLayout = 'AUTO' | 'INLINE' | 'STACKED';
+type PromptLayout = 'INLINE' | 'STACKED';
 
 type GeneratedExercise = {
   category: Category;
@@ -19,11 +21,19 @@ type GeneratedExercise = {
   metadata?: Record<string, unknown>;
 };
 
+type HistoryBaselineResponse = {
+  byCategory: Array<{
+    category: Category;
+    avgResponseMs: number;
+  }>;
+};
+
 const layoutOptions: Array<{ label: string; value: PromptLayout }> = [
-  { label: 'Auto', value: 'AUTO' },
   { label: 'En línea', value: 'INLINE' },
   { label: 'Vertical', value: 'STACKED' },
 ];
+
+const sessionSizeOptions = [10, 20, 30, 40, 50] as const;
 
 function isOperationCategory(category: Category): boolean {
   return category !== 'WORD_PROBLEM';
@@ -37,16 +47,8 @@ function getOperatorSymbol(category: Category): string {
   return '';
 }
 
-function shouldUseStackedLayout(ageGroup: AgeGroup, layout: PromptLayout): boolean {
-  if (layout === 'STACKED') {
-    return true;
-  }
-  if (layout === 'INLINE') {
-    return false;
-  }
-
-  // Auto: vertical por defecto para trabajo escolar infantil/primaria.
-  return true;
+function shouldUseStackedLayout(layout: PromptLayout): boolean {
+  return layout === 'STACKED';
 }
 
 function formatSeconds(ms: number): string {
@@ -75,10 +77,12 @@ const categoryOptions: Array<{ label: string; value: Category }> = [
 ];
 
 export function StudentExercisePanel() {
+  const { session } = useAuth();
   const [ageGroup, setAgeGroup] = useState<AgeGroup>('AGE_8_9');
   const [mode, setMode] = useState<Mode>('MIXED');
   const [categories, setCategories] = useState<Category[]>(['ADDITION', 'SUBTRACTION', 'WORD_PROBLEM']);
-  const [promptLayout, setPromptLayout] = useState<PromptLayout>('AUTO');
+  const [promptLayout, setPromptLayout] = useState<PromptLayout>('STACKED');
+  const [totalExercises, setTotalExercises] = useState<number>(10);
 
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [exercises, setExercises] = useState<GeneratedExercise[]>([]);
@@ -88,16 +92,76 @@ export function StudentExercisePanel() {
   const [questionStart, setQuestionStart] = useState<number>(Date.now());
 
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [speedTip, setSpeedTip] = useState<string | null>(null);
+  const [awaitingAdvance, setAwaitingAdvance] = useState(false);
+  const [isFinalAwaitingAdvance, setIsFinalAwaitingAdvance] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<{ correct: number; total: number; avgMs: number } | null>(null);
+  const [averageByCategoryMs, setAverageByCategoryMs] = useState<Partial<Record<Category, number>>>({});
 
   const current = useMemo(() => exercises[index], [exercises, index]);
   const shouldStackCurrentOperation =
     Boolean(current && isOperationCategory(current.category)) &&
-    shouldUseStackedLayout(ageGroup, promptLayout);
+    shouldUseStackedLayout(promptLayout);
+
+  useEffect(() => {
+    setCategories((prev) => {
+      const selectedOperations: Category[] = prev.filter(
+        (item) => item !== 'WORD_PROBLEM',
+      );
+      const safeOperations: Category[] =
+        selectedOperations.length > 0 ? selectedOperations : ['ADDITION'];
+
+      if (mode === 'WORD_PROBLEMS') {
+        return ['WORD_PROBLEM'];
+      }
+
+      if (mode === 'OPERATIONS') {
+        return safeOperations;
+      }
+
+      return [...safeOperations, 'WORD_PROBLEM'] as Category[];
+    });
+  }, [mode]);
+
+  useEffect(() => {
+    if (!session || session.user.role !== 'STUDENT') {
+      return;
+    }
+    const studentId = session.user.id;
+
+    async function loadCategoryBaseline() {
+      try {
+        const data = await apiRequest<HistoryBaselineResponse>(
+          `/students/${studentId}/history?limit=200`,
+          { auth: true },
+        );
+
+        const baseline = data.byCategory.reduce<Partial<Record<Category, number>>>(
+          (acc, item) => {
+            if (item.avgResponseMs > 0) {
+              acc[item.category] = item.avgResponseMs;
+            }
+            return acc;
+          },
+          {},
+        );
+
+        setAverageByCategoryMs(baseline);
+      } catch {
+        setAverageByCategoryMs({});
+      }
+    }
+
+    void loadCategoryBaseline();
+  }, [session]);
 
   function toggleCategory(category: Category) {
+    if (mode === 'WORD_PROBLEMS' || category === 'WORD_PROBLEM') {
+      return;
+    }
+
     setCategories((prev) =>
       prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category],
     );
@@ -107,12 +171,14 @@ export function StudentExercisePanel() {
     setError(null);
     setSummary(null);
 
+    const operationSelection = categories.filter((item) => item !== 'WORD_PROBLEM');
+    const safeOperations = operationSelection.length > 0 ? operationSelection : ['ADDITION'];
     const resolvedCategories =
       mode === 'WORD_PROBLEMS'
         ? ['WORD_PROBLEM']
         : mode === 'OPERATIONS'
-          ? categories.filter((item) => item !== 'WORD_PROBLEM')
-          : categories;
+          ? safeOperations
+          : [...safeOperations, 'WORD_PROBLEM'];
 
     try {
       const data = await apiRequest<{ session: { id: string }; exercises: GeneratedExercise[] }>(
@@ -124,7 +190,7 @@ export function StudentExercisePanel() {
             ageGroup,
             mode,
             categories: resolvedCategories.length > 0 ? resolvedCategories : ['ADDITION'],
-            totalExercises: 10,
+            totalExercises,
           },
         },
       );
@@ -136,13 +202,16 @@ export function StudentExercisePanel() {
       setAttempts([]);
       setQuestionStart(Date.now());
       setFeedback(null);
+      setSpeedTip(null);
+      setAwaitingAdvance(false);
+      setIsFinalAwaitingAdvance(false);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No se pudo iniciar la sesión');
     }
   }
 
   async function submitAnswer() {
-    if (!current || !sessionId || saving) {
+    if (!current || !sessionId || saving || awaitingAdvance) {
       return;
     }
 
@@ -171,18 +240,34 @@ export function StudentExercisePanel() {
 
     setAttempts(nextAttempts);
     setFeedback(isCorrect ? '¡Correcto!' : `No exacto. Respuesta esperada: ${current.expectedAnswer}`);
+    const speedResult = evaluateSpeedTip({
+      ageGroup,
+      category: current.category,
+      responseMs,
+      categoryAverageMs: averageByCategoryMs[current.category],
+    });
+
+    setSpeedTip(
+      speedResult.tip
+        ? `${speedResult.tip} (Tardaste ${formatSeconds(responseMs)}; objetivo ${formatSeconds(speedResult.thresholdMs)}.)`
+        : null,
+    );
+    setAverageByCategoryMs((prev) => {
+      const previousAverage = prev[current.category];
+      const nextAverage =
+        typeof previousAverage === 'number' && previousAverage > 0
+          ? Math.round(previousAverage * 0.8 + responseMs * 0.2)
+          : responseMs;
+      return {
+        ...prev,
+        [current.category]: nextAverage,
+      };
+    });
     setAnswer('');
 
-    if (index + 1 < exercises.length) {
-      window.setTimeout(() => {
-        setIndex((prev) => prev + 1);
-        setQuestionStart(Date.now());
-        setFeedback(null);
-      }, 650);
-      return;
-    }
-
-    await finishSession(nextAttempts);
+    const isLastExercise = index + 1 >= exercises.length;
+    setAwaitingAdvance(true);
+    setIsFinalAwaitingAdvance(isLastExercise);
   }
 
   async function finishSession(finalAttempts: Array<Record<string, unknown>>) {
@@ -228,6 +313,8 @@ export function StudentExercisePanel() {
       setExercises([]);
       setIndex(0);
       setFeedback(null);
+      setAwaitingAdvance(false);
+      setIsFinalAwaitingAdvance(false);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No se pudo guardar la sesión');
     } finally {
@@ -235,12 +322,30 @@ export function StudentExercisePanel() {
     }
   }
 
+  async function continueAfterFeedback() {
+    if (!awaitingAdvance || saving) {
+      return;
+    }
+
+    if (isFinalAwaitingAdvance) {
+      await finishSession(attempts);
+      return;
+    }
+
+    setIndex((prev) => prev + 1);
+    setQuestionStart(Date.now());
+    setFeedback(null);
+    setSpeedTip(null);
+    setAwaitingAdvance(false);
+    setIsFinalAwaitingAdvance(false);
+  }
+
   return (
     <Card className="border-cyan-200 bg-gradient-to-br from-[#ecfeff] to-white dark:border-slate-700 dark:from-slate-900 dark:to-slate-950">
       <CardHeader>
         <CardTitle className="text-2xl">Zona de Ejercicios</CardTitle>
         <CardDescription>
-          Elige edad, modo y categorías. Incluye operaciones y problemas con texto.
+          Elige edad, modo, categorías y tamaño de sesión.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -307,27 +412,64 @@ export function StudentExercisePanel() {
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Categorías</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {mode === 'WORD_PROBLEMS' ? 'Categoría' : 'Operaciones'}
+              </p>
+              {mode === 'MIXED' ? (
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  En modo mixto, problemas se incluyen automáticamente.
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
-                {categoryOptions.map((option) => (
+                {mode === 'WORD_PROBLEMS' ? (
+                  <span className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-bold text-white dark:bg-teal-500 dark:text-slate-950">
+                    Problemas
+                  </span>
+                ) : (
+                  categoryOptions
+                    .filter((option) => option.value !== 'WORD_PROBLEM')
+                    .map((option) => (
+                      <button
+                        key={option.value}
+                        className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                          categories.includes(option.value)
+                            ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
+                            : 'bg-teal-100 text-teal-900 hover:bg-teal-200 dark:bg-slate-800 dark:text-teal-100 dark:hover:bg-slate-700'
+                        }`}
+                        onClick={() => toggleCategory(option.value)}
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
+                    ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Ejercicios por sesión
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {sessionSizeOptions.map((size) => (
                   <button
-                    key={option.value}
+                    key={size}
                     className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
-                      categories.includes(option.value)
-                        ? 'bg-teal-600 text-white dark:bg-teal-500 dark:text-slate-950'
-                        : 'bg-teal-100 text-teal-900 hover:bg-teal-200 dark:bg-slate-800 dark:text-teal-100 dark:hover:bg-slate-700'
+                      totalExercises === size
+                        ? 'bg-violet-700 text-white dark:bg-violet-500 dark:text-slate-950'
+                        : 'bg-violet-100 text-violet-900 hover:bg-violet-200 dark:bg-slate-800 dark:text-violet-100 dark:hover:bg-slate-700'
                     }`}
-                    onClick={() => toggleCategory(option.value)}
+                    onClick={() => setTotalExercises(size)}
                     type="button"
                   >
-                    {option.label}
+                    {size}
                   </button>
                 ))}
               </div>
             </div>
 
             <Button className="h-12 w-full text-base" onClick={() => void startSession()}>
-              Empezar sesión (10 ejercicios)
+              Empezar sesión ({totalExercises} ejercicios)
             </Button>
           </>
         ) : null}
@@ -352,7 +494,18 @@ export function StudentExercisePanel() {
 
             <Input
               className="h-14 text-2xl font-bold"
+              readOnly={awaitingAdvance || saving}
               onChange={(event) => setAnswer(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  if (awaitingAdvance) {
+                    void continueAfterFeedback();
+                    return;
+                  }
+                  void submitAnswer();
+                }
+              }}
               placeholder="Tu respuesta"
               value={answer}
             />
@@ -360,19 +513,28 @@ export function StudentExercisePanel() {
             <Button
               className="h-12 w-full text-lg"
               disabled={saving}
-              onClick={() => void submitAnswer()}
+              onClick={() => void (awaitingAdvance ? continueAfterFeedback() : submitAnswer())}
             >
-              Responder
+              {awaitingAdvance
+                ? isFinalAwaitingAdvance
+                  ? 'Finalizar sesión (Enter)'
+                  : 'Siguiente (Enter)'
+                : 'Responder'}
             </Button>
 
             {feedback ? (
               <p
-                className={`text-sm font-semibold ${
+                className={`text-2xl font-black ${
                   feedback.includes('Correcto') ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
                 }`}
               >
                 {feedback}
               </p>
+            ) : null}
+            {speedTip ? (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">{speedTip}</p>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -385,6 +547,11 @@ export function StudentExercisePanel() {
             <p className="text-sm text-emerald-800 dark:text-emerald-300">
               Tiempo medio: {formatSeconds(summary.avgMs)}
             </p>
+            {speedTip ? (
+              <p className="mt-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Último tip: {speedTip}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
