@@ -5,7 +5,7 @@
   "description": "Monorepo local para app web + móvil de matemáticas escolares",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "concurrently -n api,web,mobile -c green,blue,magenta \"pnpm --filter @cerebromat/api dev\" \"pnpm --filter @cerebromat/web dev\" \"pnpm --filter @cerebromat/mobile dev\"",
+    "dev": "concurrently -n shared,api,web,mobile -c yellow,green,blue,magenta \"pnpm --filter @cerebromat/shared dev\" \"pnpm --filter @cerebromat/api dev\" \"pnpm --filter @cerebromat/web dev\" \"pnpm --filter @cerebromat/mobile dev\"",
     "dev:docker": "docker compose up -d",
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",

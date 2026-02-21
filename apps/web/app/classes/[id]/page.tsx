@@ -136,7 +136,16 @@ export default function ClassDetailPage() {
         <div className="space-y-5">
           <Card>
             <CardHeader>
-              <CardTitle>{detail.name}</CardTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle>{detail.name}</CardTitle>
+                {canManage ? (
+                  <Link href={`/classes/${detail.id}/analytics`}>
+                    <Button size="sm" variant="secondary">
+                      Ver analítica
+                    </Button>
+                  </Link>
+                ) : null}
+              </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-slate-700 dark:text-slate-300">{detail.description || 'Sin descripción'}</p>

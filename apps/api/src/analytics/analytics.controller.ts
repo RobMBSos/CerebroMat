@@ -1,6 +1,9 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { analyticsQuerySchema } from '@cerebromat/shared';
+import {
+  analyticsQuerySchema,
+  classAnalyticsQuerySchema,
+} from '@cerebromat/shared';
 import { z } from 'zod';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -22,5 +25,14 @@ export class AnalyticsController {
     query: z.infer<typeof analyticsQuerySchema>,
   ) {
     return this.analyticsService.getStudentSeries(user, query);
+  }
+
+  @Get('class-overview')
+  classOverview(
+    @CurrentUser() user: AuthUser,
+    @Query(new ZodValidationPipe(classAnalyticsQuerySchema))
+    query: z.infer<typeof classAnalyticsQuerySchema>,
+  ) {
+    return this.analyticsService.getClassOverview(user, query);
   }
 }

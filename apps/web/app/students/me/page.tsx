@@ -14,6 +14,11 @@ export default function StudentsMePage() {
       return;
     }
 
+    if (session.user.role === 'PARENT') {
+      router.replace('/children');
+      return;
+    }
+
     if (session.user.role === 'STUDENT') {
       router.replace(`/students/${session.user.id}`);
       return;

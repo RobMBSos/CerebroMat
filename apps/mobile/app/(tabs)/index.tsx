@@ -60,6 +60,10 @@ function shouldUseStackedLayout(ageGroup: AgeGroup, layout: PromptLayout): boole
   return true;
 }
 
+function formatSeconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
 export default function ExercisesTab() {
   const { session, request } = useAuth();
   const [ageGroup, setAgeGroup] = useState<AgeGroup>('AGE_8_9');
@@ -379,7 +383,7 @@ export default function ExercisesTab() {
             <Text style={{ fontSize: 22, fontWeight: '800', color: '#0f172a' }}>Resumen</Text>
             <Text style={{ color: '#0f172a' }}>Aciertos: {summary.correct}</Text>
             <Text style={{ color: '#0f172a' }}>Total: {summary.total}</Text>
-            <Text style={{ color: '#0f172a' }}>Tiempo medio: {summary.avgMs} ms</Text>
+            <Text style={{ color: '#0f172a' }}>Tiempo medio: {formatSeconds(summary.avgMs)}</Text>
           </View>
         ) : null}
 

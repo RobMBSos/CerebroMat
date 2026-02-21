@@ -4,4 +4,5 @@ export * from './schemas/auth';
 export * from './schemas/classroom';
 export * from './schemas/exercise';
 export * from './schemas/analytics';
+export * from './schemas/students';
 export * from './utils/adaptive';

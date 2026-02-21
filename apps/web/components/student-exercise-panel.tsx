@@ -49,6 +49,10 @@ function shouldUseStackedLayout(ageGroup: AgeGroup, layout: PromptLayout): boole
   return true;
 }
 
+function formatSeconds(ms: number): string {
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
 const ageOptions: Array<{ label: string; value: AgeGroup }> = [
   { label: '3-5', value: 'INFANT_3_5' },
   { label: '6-7', value: 'AGE_6_7' },
@@ -378,7 +382,9 @@ export function StudentExercisePanel() {
             <p className="text-lg font-black text-emerald-900 dark:text-emerald-200">Resumen de sesión</p>
             <p className="text-sm text-emerald-800 dark:text-emerald-300">Aciertos: {summary.correct}</p>
             <p className="text-sm text-emerald-800 dark:text-emerald-300">Total: {summary.total}</p>
-            <p className="text-sm text-emerald-800 dark:text-emerald-300">Tiempo medio: {summary.avgMs} ms</p>
+            <p className="text-sm text-emerald-800 dark:text-emerald-300">
+              Tiempo medio: {formatSeconds(summary.avgMs)}
+            </p>
           </div>
         ) : null}
 

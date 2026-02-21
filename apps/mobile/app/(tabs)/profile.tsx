@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '@/lib/auth';
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  TEACHER: 'Profesor',
+  PARENT: 'Padre/Madre',
+  STUDENT: 'Alumno',
+};
+
 export default function ProfileTab() {
   const { session, logout, request } = useAuth();
   const [inviteCode, setInviteCode] = useState('');
@@ -43,7 +50,9 @@ export default function ProfileTab() {
           <Text style={{ fontSize: 26, fontWeight: '800', color: '#0f172a' }}>Perfil</Text>
           <Text style={{ color: '#0f172a', fontWeight: '700' }}>{session.user.fullName}</Text>
           <Text style={{ color: '#334155' }}>{session.user.email}</Text>
-          <Text style={{ color: '#334155' }}>Rol: {session.user.role}</Text>
+          <Text style={{ color: '#334155' }}>
+            Rol: {ROLE_LABELS[session.user.role] ?? session.user.role}
+          </Text>
         </View>
 
         {canJoin ? (

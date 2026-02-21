@@ -33,6 +33,17 @@ type AnalyticsData = {
   timeSeries: Array<{ period: string; avgResponseMs: number }>;
 };
 
+function toSeconds(valueMs: number): number {
+  return Number((valueMs / 1000).toFixed(2));
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrador',
+  TEACHER: 'Profesor',
+  PARENT: 'Padre/Madre',
+  STUDENT: 'Alumno',
+};
+
 export default function DashboardPage() {
   const { session, loading } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
@@ -106,7 +117,9 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardDescription>Rol de acceso</CardDescription>
-            <CardTitle className="text-2xl">{session.user.role}</CardTitle>
+            <CardTitle className="text-2xl">
+              {ROLE_LABELS[session.user.role] ?? session.user.role}
+            </CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -168,10 +181,13 @@ export default function DashboardPage() {
           />
           <StudentMetricsChart
             title="Tiempo medio"
-            description="Milisegundos por intento"
+            description="Segundos por intento"
             color="#0369a1"
             metric="avgResponseMs"
-            data={analytics.timeSeries}
+            data={analytics.timeSeries.map((item) => ({
+              ...item,
+              avgResponseMs: toSeconds(item.avgResponseMs),
+            }))}
           />
         </div>
       ) : null}
