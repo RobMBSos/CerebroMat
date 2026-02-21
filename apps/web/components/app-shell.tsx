@@ -21,6 +21,7 @@ const links: Array<{
   href: string;
   label: string;
   studentLabel?: string;
+  parentLabel?: string;
   icon: typeof LayoutDashboard;
   roles: Role[];
 }> = [
@@ -38,22 +39,29 @@ const links: Array<{
   },
   {
     href: '/children',
-    label: 'Hijos',
+    label: 'Alumnos',
+    parentLabel: 'Hijos',
     icon: Users,
-    roles: ['PARENT'],
+    roles: ['ADMIN', 'TEACHER', 'PARENT'],
   },
   {
     href: '/students/me',
     label: 'Alumnos',
     studentLabel: 'Mi Progreso',
     icon: Users,
-    roles: ['ADMIN', 'TEACHER', 'STUDENT'],
+    roles: ['STUDENT'],
   },
 ];
 
-function isActivePath(pathname: string, href: string) {
+function isActivePath(pathname: string, href: string, role?: Role) {
   if (href === '/dashboard') {
     return pathname === '/dashboard';
+  }
+  if (href === '/children') {
+    return (
+      pathname === '/children' ||
+      (role !== 'STUDENT' && pathname.startsWith('/students/'))
+    );
   }
   if (href === '/students/me') {
     return pathname.startsWith('/students/');
@@ -97,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   href={link.href}
                   className={cn(
                     'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
-                    isActivePath(pathname, link.href)
+                    isActivePath(pathname, link.href, role)
                       ? 'bg-cyan-700 text-white dark:bg-cyan-500 dark:text-slate-950'
                       : 'bg-cyan-50 text-cyan-800 hover:bg-cyan-100 dark:bg-slate-800 dark:text-cyan-100 dark:hover:bg-slate-700',
                   )}
@@ -105,7 +113,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <Icon className="size-4" />
                   {role === 'STUDENT' && link.studentLabel
                     ? link.studentLabel
-                    : link.label}
+                    : role === 'PARENT' && link.parentLabel
+                      ? link.parentLabel
+                      : link.label}
                 </Link>
               );
             })}

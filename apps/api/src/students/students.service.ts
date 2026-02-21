@@ -284,12 +284,27 @@ export class StudentsService {
             return right.attempts - left.attempts;
           })[0];
 
+        const classes = student.enrollments
+          .map((enrollment) => ({
+            id: enrollment.class.id,
+            name: enrollment.class.name,
+          }))
+          .filter(
+            (item, index, array) =>
+              array.findIndex((candidate) => candidate.id === item.id) ===
+              index,
+          )
+          .sort((left, right) =>
+            left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
+          );
+
         return {
           student: {
             id: student.id,
             fullName: student.fullName,
             email: student.email,
             ageGroup: student.studentProfile?.ageGroup ?? null,
+            classes,
           },
           metrics: {
             totalAttempts,

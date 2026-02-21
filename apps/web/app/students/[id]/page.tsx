@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { StudentMetricsChart } from '@/components/charts/student-metrics-chart';
 import { Badge } from '@/components/ui/badge';
@@ -87,6 +88,7 @@ function toSeconds(ms: number): number {
 export default function StudentDetailPage() {
   const { session, loading } = useAuth();
   const params = useParams<{ id: string }>();
+  const router = useRouter();
 
   const [detail, setDetail] = useState<StudentDetailResponse | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
@@ -148,6 +150,36 @@ export default function StudentDetailPage() {
 
   return (
     <AppShell>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700 dark:text-cyan-300">Detalle de alumno</p>
+          <p className="text-base font-black text-slate-800 dark:text-slate-100">
+            {detail?.student.fullName ?? 'Alumno'}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={() => router.back()}>
+            Atrás
+          </Button>
+          {session.user.role === 'STUDENT' ? (
+            <Link href="/dashboard">
+              <Button variant="ghost">Mi panel</Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/children">
+                <Button variant="ghost">Alumnos</Button>
+              </Link>
+              {(session.user.role === 'TEACHER' || session.user.role === 'ADMIN') ? (
+                <Link href="/classes">
+                  <Button variant="ghost">Clases</Button>
+                </Link>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="grid gap-5 md:grid-cols-4">
         <Card>
           <CardHeader>

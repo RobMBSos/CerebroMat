@@ -7,6 +7,7 @@ import { StudentMetricsChart } from '@/components/charts/student-metrics-chart';
 import { StudentExercisePanel } from '@/components/student-exercise-panel';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 import { apiRequest } from '@/lib/api';
 
@@ -48,6 +49,7 @@ export default function DashboardPage() {
   const { session, loading } = useAuth();
   const [classes, setClasses] = useState<ClassItem[]>([]);
   const [students, setStudents] = useState<StudentItem[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,18 +68,12 @@ export default function DashboardPage() {
         setClasses(classesData);
         setStudents(studentsData);
 
-        const studentId =
+        const initialStudentId =
           activeSession.user.role === 'STUDENT'
             ? activeSession.user.id
-            : (studentsData[0]?.id ?? activeSession.user.id);
+            : (studentsData[0]?.id ?? null);
 
-        if (studentId) {
-          const analyticsData = await apiRequest<AnalyticsData>(
-            `/analytics/student-series?studentId=${studentId}&granularity=day`,
-            { auth: true },
-          );
-          setAnalytics(analyticsData);
-        }
+        setSelectedStudentId(initialStudentId);
       } catch (requestError) {
         setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar dashboard');
       }
@@ -86,8 +82,34 @@ export default function DashboardPage() {
     void loadData(session);
   }, [session]);
 
+  useEffect(() => {
+    if (!session || !selectedStudentId) {
+      setAnalytics(null);
+      return;
+    }
+
+    async function loadAnalytics(studentId: string) {
+      try {
+        setError(null);
+        const analyticsData = await apiRequest<AnalyticsData>(
+          `/analytics/student-series?studentId=${studentId}&granularity=day`,
+          { auth: true },
+        );
+        setAnalytics(analyticsData);
+      } catch (requestError) {
+        setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar analítica');
+      }
+    }
+
+    void loadAnalytics(selectedStudentId);
+  }, [selectedStudentId, session]);
+
   const totalStudents = useMemo(() => students.length, [students.length]);
   const totalClasses = useMemo(() => classes.length, [classes.length]);
+  const selectedStudent = useMemo(
+    () => students.find((student) => student.id === selectedStudentId) ?? null,
+    [selectedStudentId, students],
+  );
 
   if (loading || !session) {
     return null;
@@ -169,27 +191,56 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {analytics ? (
-        <div className="mt-6 grid gap-5 lg:grid-cols-2">
-          <StudentMetricsChart
-            title="Aciertos por día"
-            description="Evolución de precisión"
-            color="#0f766e"
-            metric="accuracy"
-            yDomain={[0, 1]}
-            data={analytics.accuracySeries}
-          />
-          <StudentMetricsChart
-            title="Tiempo medio"
-            description="Segundos por intento"
-            color="#0369a1"
-            metric="avgResponseMs"
-            data={analytics.timeSeries.map((item) => ({
-              ...item,
-              avgResponseMs: toSeconds(item.avgResponseMs),
-            }))}
-          />
-        </div>
+      {session.user.role === 'STUDENT' || students.length > 0 ? (
+        <>
+          <Card className="mt-6">
+            <CardHeader className="gap-3">
+              <CardTitle>Analítica rápida</CardTitle>
+              <CardDescription>
+                {selectedStudent
+                  ? `Seleccionado: ${selectedStudent.fullName}`
+                  : 'Selecciona un alumno para ver sus gráficas'}
+              </CardDescription>
+              {session.user.role !== 'STUDENT' ? (
+                <Select
+                  value={selectedStudentId ?? ''}
+                  onChange={(event) => setSelectedStudentId(event.target.value)}
+                  options={students.map((student) => ({
+                    value: student.id,
+                    label: student.fullName,
+                  }))}
+                />
+              ) : null}
+              {students.length === 0 && session.user.role !== 'STUDENT' ? (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  No hay alumnos disponibles para mostrar analítica.
+                </p>
+              ) : null}
+            </CardHeader>
+          </Card>
+          {analytics ? (
+            <div className="mt-6 grid gap-5 lg:grid-cols-2">
+              <StudentMetricsChart
+                title="Aciertos por día"
+                description="Porcentaje de aciertos del alumno seleccionado"
+                color="#0f766e"
+                metric="accuracy"
+                yDomain={[0, 1]}
+                data={analytics.accuracySeries}
+              />
+              <StudentMetricsChart
+                title="Tiempo medio"
+                description="Segundos por intento del alumno seleccionado"
+                color="#0369a1"
+                metric="avgResponseMs"
+                data={analytics.timeSeries.map((item) => ({
+                  ...item,
+                  avgResponseMs: toSeconds(item.avgResponseMs),
+                }))}
+              />
+            </div>
+          ) : null}
+        </>
       ) : null}
 
       {error ? <p className="mt-6 text-sm text-red-700 dark:text-red-300">{error}</p> : null}

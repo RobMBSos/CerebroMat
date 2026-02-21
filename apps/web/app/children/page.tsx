@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +23,10 @@ type OverviewResponse = {
       fullName: string;
       email: string;
       ageGroup: string | null;
+      classes: Array<{
+        id: string;
+        name: string;
+      }>;
     };
     metrics: {
       totalAttempts: number;
@@ -50,6 +54,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 function formatSeconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)} s`;
 }
+
+type StudentOverviewItem = OverviewResponse['students'][number];
 
 export default function ChildrenPage() {
   const { session, loading } = useAuth();
@@ -85,12 +91,63 @@ export default function ChildrenPage() {
     void loadOverview();
   }, [session]);
 
+  const groupedByClass = useMemo(() => {
+    const groups = new Map<
+      string,
+      { id: string; name: string; students: StudentOverviewItem[] }
+    >();
+    const withoutClass: StudentOverviewItem[] = [];
+
+    for (const row of overview?.students ?? []) {
+      if (row.student.classes.length === 0) {
+        withoutClass.push(row);
+        continue;
+      }
+
+      for (const classroom of row.student.classes) {
+        const current = groups.get(classroom.id);
+        if (current) {
+          current.students.push(row);
+          continue;
+        }
+        groups.set(classroom.id, {
+          id: classroom.id,
+          name: classroom.name,
+          students: [row],
+        });
+      }
+    }
+
+    const classes = Array.from(groups.values())
+      .map((item) => ({
+        ...item,
+        students: item.students.sort((left, right) =>
+          left.student.fullName.localeCompare(right.student.fullName, 'es', {
+            sensitivity: 'base',
+          }),
+        ),
+      }))
+      .sort((left, right) =>
+        left.name.localeCompare(right.name, 'es', { sensitivity: 'base' }),
+      );
+
+    return {
+      classes,
+      withoutClass: withoutClass.sort((left, right) =>
+        left.student.fullName.localeCompare(right.student.fullName, 'es', {
+          sensitivity: 'base',
+        }),
+      ),
+    };
+  }, [overview?.students]);
+
   if (loading || roleLoading || !session || !allowed) {
     return null;
   }
 
-  const heading =
-    session.user.role === 'PARENT' ? 'Mis hijos' : 'Resumen de alumnos';
+  const teacherOrAdmin =
+    session.user.role === 'TEACHER' || session.user.role === 'ADMIN';
+  const heading = session.user.role === 'PARENT' ? 'Mis hijos' : 'Resumen de alumnos';
 
   return (
     <AppShell>
@@ -101,7 +158,9 @@ export default function ChildrenPage() {
             Seguimiento rápido de precisión, tiempos y áreas con más fallos.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
+        <CardContent
+          className={`grid gap-4 ${teacherOrAdmin ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}
+        >
           <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-4 dark:border-slate-700 dark:bg-slate-800">
             <p className="text-xs font-semibold uppercase text-cyan-700 dark:text-cyan-300">
               Alumnos
@@ -110,6 +169,16 @@ export default function ChildrenPage() {
               {overview?.summary.studentCount ?? 0}
             </p>
           </div>
+          {teacherOrAdmin ? (
+            <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-xs font-semibold uppercase text-cyan-700 dark:text-cyan-300">
+                Clases
+              </p>
+              <p className="text-3xl font-black text-slate-800 dark:text-slate-100">
+                {groupedByClass.classes.length}
+              </p>
+            </div>
+          ) : null}
           <div className="rounded-xl border border-cyan-100 bg-cyan-50 p-4 dark:border-slate-700 dark:bg-slate-800">
             <p className="text-xs font-semibold uppercase text-cyan-700 dark:text-cyan-300">
               Intentos
@@ -128,6 +197,75 @@ export default function ChildrenPage() {
           </div>
         </CardContent>
       </Card>
+
+      {teacherOrAdmin ? (
+        <Card className="mt-5">
+          <CardHeader>
+            <CardTitle>Alumnos por clase</CardTitle>
+            <CardDescription>
+              Vista organizada por clase para detectar rápido qué grupo necesita
+              más refuerzo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {groupedByClass.classes.map((group) => (
+              <div
+                key={group.id}
+                className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-lg font-black text-slate-800 dark:text-slate-100">
+                    {group.name}
+                  </p>
+                  <Badge>{group.students.length} alumnos</Badge>
+                </div>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {group.students.map((item) => (
+                    <Link
+                      key={`${group.id}-${item.student.id}`}
+                      href={`/students/${item.student.id}`}
+                      className="rounded-lg border border-cyan-100 bg-cyan-50 p-3 transition-colors hover:bg-cyan-100 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-700"
+                    >
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">
+                        {item.student.fullName}
+                      </p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        Precisión {Math.round(item.metrics.accuracy * 100)}% ·
+                        Fallos {item.metrics.incorrectAttempts} ·{' '}
+                        {formatSeconds(item.metrics.averageResponseMs)}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {groupedByClass.withoutClass.length > 0 ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                <p className="font-black text-amber-900 dark:text-amber-200">
+                  Sin clase asignada
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {groupedByClass.withoutClass.map((item) => (
+                    <Link
+                      key={`without-class-${item.student.id}`}
+                      href={`/students/${item.student.id}`}
+                      className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"
+                    >
+                      {item.student.fullName}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {groupedByClass.classes.length === 0 &&
+            groupedByClass.withoutClass.length === 0 ? (
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Todavía no hay alumnos para mostrar por clase.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="mt-5">
         <CardHeader>
@@ -148,6 +286,22 @@ export default function ChildrenPage() {
                   <p className="text-xs text-slate-600 dark:text-slate-300">
                     {item.student.email}
                   </p>
+                  {item.student.classes.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {item.student.classes.map((classroom) => (
+                        <span
+                          key={`${item.student.id}-${classroom.id}`}
+                          className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100"
+                        >
+                          {classroom.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      Sin clase asignada
+                    </p>
+                  )}
                 </div>
                 <Badge>{item.student.ageGroup ?? 'Sin edad'}</Badge>
               </div>

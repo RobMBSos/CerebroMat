@@ -13,6 +13,8 @@ dist
 build
 .next
 **/.next_broken*
+**/.next_corrupt*
+**/.next_rebuild*
 expo-env.d.ts
 .expo
 coverage

@@ -48,7 +48,7 @@ async function main() {
 
   const student = await upsertUser({
     email: 'student@demo.local',
-    fullName: 'Mateo Alumno',
+    fullName: 'Mateo García',
     role: Role.STUDENT,
     passwordHash,
   });
