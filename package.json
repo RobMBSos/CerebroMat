@@ -1,0 +1,21 @@
+{
+  "name": "cerebromat",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Monorepo local para app web + móvil de matemáticas escolares",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "concurrently -n api,web,mobile -c green,blue,magenta \"pnpm --filter @cerebromat/api dev\" \"pnpm --filter @cerebromat/web dev\" \"pnpm --filter @cerebromat/mobile dev\"",
+    "dev:docker": "docker compose up -d",
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "lint": "pnpm -r --if-present lint",
+    "format": "pnpm -r --if-present format",
+    "db:migrate": "pnpm --filter @cerebromat/api db:migrate",
+    "db:seed": "pnpm --filter @cerebromat/api db:seed",
+    "db:studio": "pnpm --filter @cerebromat/api db:studio"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

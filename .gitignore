@@ -1,0 +1,26 @@
+node_modules
+.pnpm-store
+.turbo
+
+# env files (keep only examples in git)
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+
+# build artifacts
+dist
+build
+.next
+**/.next_broken*
+expo-env.d.ts
+.expo
+coverage
+
+# logs / os files
+*.log
+.DS_Store
+
+# local sqlite leftovers (project uses postgres in docker/orbstack)
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal

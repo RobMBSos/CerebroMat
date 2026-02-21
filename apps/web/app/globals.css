@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-display: 'Baloo 2', cursive;
+  --font-body: 'Nunito', sans-serif;
+  --background: #f0f9ff;
+  --foreground: #0f172a;
+  --chart-axis: #334155;
+  --chart-grid: #cbd5e1;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #cbd5e1;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #e2e8f0;
+  --chart-axis: #94a3b8;
+  --chart-grid: #334155;
+  --chart-tooltip-bg: #0f172a;
+  --chart-tooltip-border: #334155;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: var(--background);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
