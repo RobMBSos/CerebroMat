@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getSpeedTipForCategory } from '@cerebromat/shared';
 import { Pressable, SafeAreaView, ScrollView, Text, View } from 'react-native';
+import { AppFooter } from '@/components/app-footer';
 import { useAuth } from '@/lib/auth';
 import { MiniBarChart } from '@/components/bar-chart';
 
@@ -339,6 +340,7 @@ export default function ProgressTab() {
         )}
 
         {error ? <Text style={{ color: '#b91c1c', fontWeight: '700' }}>{error}</Text> : null}
+        <AppFooter />
       </ScrollView>
     </SafeAreaView>
   );

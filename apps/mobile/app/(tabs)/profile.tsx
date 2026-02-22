@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { AppFooter } from '@/components/app-footer';
 import { useAuth } from '@/lib/auth';
 
 const ROLE_LABELS: Record<string, string> = {
@@ -82,6 +83,8 @@ export default function ProfileTab() {
         >
           <Text style={{ color: '#ffffff', fontWeight: '800' }}>Cerrar sesión</Text>
         </Pressable>
+
+        <AppFooter />
       </ScrollView>
     </SafeAreaView>
   );

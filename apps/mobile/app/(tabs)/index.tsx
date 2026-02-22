@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { evaluateSpeedTip } from '@cerebromat/shared';
 import { Pressable, SafeAreaView, ScrollView, Text, TextInput, View } from 'react-native';
+import { AppFooter } from '@/components/app-footer';
 import { useAuth } from '@/lib/auth';
 
 type AgeGroup = 'INFANT_3_5' | 'AGE_6_7' | 'AGE_8_9' | 'AGE_10_12';
@@ -589,6 +590,7 @@ export default function ExercisesTab() {
         ) : null}
 
         {error ? <Text style={{ color: '#b91c1c', fontWeight: '700' }}>{error}</Text> : null}
+        <AppFooter />
       </ScrollView>
     </SafeAreaView>
   );

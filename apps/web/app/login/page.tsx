@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
 import { setSession } from '@/lib/auth';
@@ -46,8 +47,27 @@ export default function LoginPage() {
         <ThemeToggle />
       </div>
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-3xl">CerebroMat</CardTitle>
+        <CardHeader className="items-center text-center">
+          <div className="mb-2 rounded-2xl border border-cyan-100 bg-cyan-50 p-2 dark:border-slate-700 dark:bg-slate-800">
+            <Image
+              src="/CerebroMat_robot.png"
+              alt="Robot CerebroMat"
+              width={88}
+              height={88}
+              className="h-20 w-20 object-contain"
+              priority
+            />
+          </div>
+          <CardTitle className="w-full">
+            <Image
+              src="/CerebroMat_Letras_full.png"
+              alt="CerebroMat"
+              width={320}
+              height={76}
+              className="mx-auto h-12 w-auto"
+              priority
+            />
+          </CardTitle>
           <CardDescription>Inicia sesion para entrar al panel escolar</CardDescription>
         </CardHeader>
         <CardContent>
