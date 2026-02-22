@@ -1,0 +1,135 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Job 1: Test ────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: cerebromat_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d cerebromat_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://test:test@localhost:5432/cerebromat_test?schema=public
+      JWT_ACCESS_SECRET: test-access-secret-12chars
+      JWT_REFRESH_SECRET: test-refresh-secret-12chars
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @cerebromat/shared build
+
+      - name: Generate Prisma client
+        run: pnpm --filter @cerebromat/api db:generate
+
+      - name: Run Prisma migrations
+        run: pnpm --filter @cerebromat/api exec prisma migrate deploy
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+  # ── Job 2: Build Docker images (parallel matrix) ──────────────────────────
+  build:
+    name: Build ${{ matrix.app }}
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [api, web, mobile]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/dockerfiles/${{ matrix.app }}.Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:latest
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # ── Job 3: Deploy to VPS ──────────────────────────────────────────────────
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/cerebromat
+
+            # Pull latest images
+            docker compose -f docker-compose.production.yml pull
+
+            # Run database migrations in a temporary container
+            docker compose -f docker-compose.production.yml run --rm \
+              -e DATABASE_URL="postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:5432/$POSTGRES_DB?schema=public" \
+              api npx prisma migrate deploy
+
+            # Rolling restart (each service waits for health check)
+            docker compose -f docker-compose.production.yml up -d --no-deps --wait api
+            docker compose -f docker-compose.production.yml up -d --no-deps --wait web
+            docker compose -f docker-compose.production.yml up -d --no-deps --wait mobile
+            docker compose -f docker-compose.production.yml up -d --no-deps --wait caddy
+
+            # Prune old images
+            docker image prune -f

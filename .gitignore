@@ -19,6 +19,9 @@ expo-env.d.ts
 .expo
 coverage
 
+# production secrets
+deploy/.env.production
+
 # logs / os files
 *.log
 .DS_Store

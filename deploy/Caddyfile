@@ -1,0 +1,44 @@
+{$DOMAIN} {
+	# TLS with Let's Encrypt
+	tls {$ACME_EMAIL}
+
+	# Compression
+	encode zstd gzip
+
+	# Security headers
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-XSS-Protection "1; mode=block"
+		-Server
+	}
+
+	# Access log
+	log {
+		output file /data/access.log {
+			roll_size 10mb
+			roll_keep 5
+		}
+	}
+
+	# ── API routes ────────────────────────────────────────────────────────
+	handle /api/* {
+		reverse_proxy api:4001
+	}
+
+	handle /swagger* {
+		reverse_proxy api:4001
+	}
+
+	# ── Mobile web app ───────────────────────────────────────────────────
+	handle /app/* {
+		uri strip_prefix /app
+		reverse_proxy mobile:8080
+	}
+
+	# ── Web dashboard (catch-all) ────────────────────────────────────────
+	handle {
+		reverse_proxy web:3000
+	}
+}
