@@ -48,7 +48,7 @@ ENV PORT=4001
 EXPOSE 4001
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:4001/swagger || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:4001/swagger || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/src/main.js"]
