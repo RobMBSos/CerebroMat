@@ -139,10 +139,8 @@ jobs:
             # Pull latest images
             docker compose -f docker-compose.production.yml pull
 
-            # Run database migrations in a temporary container
-            docker compose -f docker-compose.production.yml run --rm \
-              -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public" \
-              api npx prisma migrate deploy
+            # Run database migrations (uses DATABASE_URL from compose env)
+            docker compose -f docker-compose.production.yml run --rm api npx prisma migrate deploy
 
             # Rolling restart (each service waits for health check)
             docker compose -f docker-compose.production.yml up -d --no-deps --wait api

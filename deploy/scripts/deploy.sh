@@ -28,16 +28,12 @@ $COMPOSE up -d postgres
 $COMPOSE exec postgres sh -c 'until pg_isready -U $POSTGRES_USER; do sleep 1; done'
 
 echo "==> Running database migrations..."
-$COMPOSE run --rm \
-  -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public" \
-  api npx prisma migrate deploy
+$COMPOSE run --rm api npx prisma migrate deploy
 
 # Optional: seed database on first deploy
 if [[ "${1:-}" == "--seed" ]]; then
   echo "==> Seeding database..."
-  $COMPOSE run --rm \
-    -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public" \
-    api npx tsx prisma/seed.ts
+  $COMPOSE run --rm api npx tsx prisma/seed.ts
 fi
 
 echo "==> Rolling restart (with health checks)..."
