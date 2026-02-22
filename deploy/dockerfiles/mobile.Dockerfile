@@ -1,36 +1,27 @@
-# ── Stage 1: Dependencies ────────────────────────────────────────────────────
-FROM node:22-alpine AS deps
-
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-WORKDIR /app
-
-# Copy only lockfile + workspace configs for cached install
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/mobile/package.json apps/mobile/package.json
-COPY packages/shared/package.json packages/shared/package.json
-
-RUN pnpm fetch
-RUN pnpm install --frozen-lockfile --offline
-
-# ── Stage 2: Builder ─────────────────────────────────────────────────────────
+# ── Stage 1: Install & Build ─────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/mobile/node_modules ./apps/mobile/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+# Copy the entire monorepo for full install (Expo needs all hoisted deps)
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
+COPY apps/mobile/package.json apps/mobile/package.json
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
 
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
 COPY packages/shared packages/shared
 COPY apps/mobile apps/mobile
 
-# Build shared package first, then export Expo as static web
+# Build shared → export Expo as static web SPA
 RUN pnpm --filter @cerebromat/shared build \
  && cd apps/mobile && npx expo export --platform web
 
-# ── Stage 3: Serve static files with Caddy ───────────────────────────────────
+# ── Stage 2: Serve static files with Caddy ───────────────────────────────────
 FROM caddy:2-alpine AS runner
 
 # Copy exported static site
