@@ -7,6 +7,7 @@ import {
 import type {
   StudentHistoryQueryDto,
   StudentOverviewQueryDto,
+  StudentSessionsQueryDto,
 } from '@cerebromat/shared';
 import { ExerciseCategory, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -353,6 +354,86 @@ export class StudentsService {
       },
       students: studentRows,
     };
+  }
+
+  async getStudentSessions(
+    user: AuthUser,
+    studentId: string,
+    query: StudentSessionsQueryDto,
+  ) {
+    await this.assertCanViewStudent(user, studentId);
+
+    const from = query.from
+      ? new Date(query.from)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const to = query.to ? new Date(query.to) : new Date();
+
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+      throw new BadRequestException('Invalid date range');
+    }
+
+    if (from > to) {
+      throw new BadRequestException(
+        '`from` must be lower than or equal to `to`',
+      );
+    }
+
+    const sessions = await this.prisma.exerciseSession.findMany({
+      where: {
+        studentId,
+        startedAt: { gte: from, lte: to },
+        ...(query.category
+          ? { attempts: { some: { category: query.category } } }
+          : {}),
+      },
+      include: {
+        attempts: {
+          orderBy: { answeredAt: 'asc' },
+          ...(query.category ? { where: { category: query.category } } : {}),
+        },
+        assignmentCompletion: {
+          include: { assignment: { select: { id: true, title: true } } },
+        },
+      },
+      orderBy: { startedAt: 'desc' },
+      take: query.limit,
+    });
+
+    return sessions.map((session) => {
+      const total = session.attempts.length;
+      const correct = session.attempts.filter((a) => a.isCorrect).length;
+      const accuracy = total > 0 ? Number((correct / total).toFixed(3)) : 0;
+      const avgResponseMs =
+        total > 0
+          ? Math.round(
+              session.attempts.reduce((acc, a) => acc + a.responseMs, 0) /
+                total,
+            )
+          : 0;
+
+      return {
+        id: session.id,
+        mode: session.mode,
+        difficulty: session.difficulty,
+        totalExercises: session.totalExercises,
+        status: session.status,
+        startedAt: session.startedAt,
+        finishedAt: session.finishedAt,
+        assignment: session.assignmentCompletion?.assignment ?? null,
+        stats: { total, correct, accuracy, avgResponseMs },
+        attempts: session.attempts.map((a) => ({
+          id: a.id,
+          category: a.category,
+          level: a.level,
+          prompt: a.prompt,
+          expectedAnswer: a.expectedAnswer,
+          studentAnswer: a.studentAnswer,
+          isCorrect: a.isCorrect,
+          responseMs: a.responseMs,
+          answeredAt: a.answeredAt,
+        })),
+      };
+    });
   }
 
   async assertCanViewStudent(user: AuthUser, studentId: string) {

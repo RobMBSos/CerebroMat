@@ -12,5 +12,7 @@ export const EXERCISE_CATEGORIES = [
 
 export const USER_ROLES = ['ADMIN', 'TEACHER', 'PARENT', 'STUDENT'] as const;
 
+export const DIFFICULTY_LEVELS = ['EASY', 'NORMAL', 'HARD'] as const;
+
 export const DEFAULT_SESSION_EXERCISES = 10;
 export const ADAPTIVE_WINDOW_SIZE = 20;

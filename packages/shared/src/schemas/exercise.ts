@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AGE_GROUPS,
   DEFAULT_SESSION_EXERCISES,
+  DIFFICULTY_LEVELS,
   EXERCISE_CATEGORIES,
   EXERCISE_MODES,
 } from '../constants/exercise';
@@ -11,6 +12,7 @@ export const startSessionSchema = z.object({
   mode: z.enum(EXERCISE_MODES),
   categories: z.array(z.enum(EXERCISE_CATEGORIES)).min(1),
   totalExercises: z.number().int().min(1).max(50).default(DEFAULT_SESSION_EXERCISES),
+  difficulty: z.enum(DIFFICULTY_LEVELS).optional(),
 });
 
 export const finishSessionSchema = z.object({

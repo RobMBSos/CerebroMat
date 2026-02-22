@@ -80,42 +80,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top_left,_#ccfbf1_0%,_#f0f9ff_35%,_#ecfeff_100%)] dark:bg-[radial-gradient(circle_at_top_left,_#083344_0%,_#0b1120_45%,_#020617_100%)]">
-      <header className="sticky top-0 z-10 border-b border-cyan-100 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:px-6">
-          <Link href="/dashboard" className="-ml-1 flex items-center gap-4 md:-ml-2 md:gap-5">
+      <header className="sticky top-0 z-10 border-b border-slate-800 bg-gradient-to-r from-[#0a1628] via-[#0d2847] to-[#0a1628]">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 md:px-6">
+          <Link href="/dashboard" className="flex items-center gap-3 md:gap-4">
             <Image
               src="/CerebroMat_robot.png"
               alt="Mascota CerebroMat"
-              width={76}
-              height={76}
-              className="h-16 w-16 rounded-2xl object-cover md:h-[4.75rem] md:w-[4.75rem]"
+              width={96}
+              height={96}
+              className="h-14 w-14 rounded-xl object-cover md:h-20 md:w-20"
               priority
             />
-            <div>
+            <div className="flex flex-col">
               <Image
-                src="/CerebroMat_Letras_full.png"
+                src="/CerebroMat_Letras_logo.png"
                 alt="CerebroMat"
-                width={440}
-                height={104}
-                className="h-16 w-auto"
+                width={500}
+                height={120}
+                className="h-9 w-auto md:h-12"
                 priority
               />
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700 dark:text-cyan-300">
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.25em] text-cyan-400/80 md:text-xs">
                 Panel Escolar
               </p>
             </div>
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <div className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 dark:border-slate-700 dark:bg-slate-900/80">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{session?.user.fullName}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="rounded-xl border border-cyan-800/40 bg-slate-900/60 px-3 py-2">
+              <p className="text-sm font-semibold text-cyan-100">{session?.user.fullName}</p>
+              <p className="text-xs text-cyan-300/60">
                 {role ? roleLabels[role] : ''}
               </p>
             </div>
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pb-3 md:px-6">
+        <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 pb-2.5 md:px-6">
           <div className="flex flex-wrap items-center gap-2">
             {visibleLinks.map((link) => {
               const Icon = link.icon;
@@ -126,8 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className={cn(
                     'inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
                     isActivePath(pathname, link.href, role)
-                      ? 'bg-cyan-700 text-white dark:bg-cyan-500 dark:text-slate-950'
-                      : 'bg-cyan-50 text-cyan-800 hover:bg-cyan-100 dark:bg-slate-800 dark:text-cyan-100 dark:hover:bg-slate-700',
+                      ? 'bg-cyan-500 text-slate-950'
+                      : 'bg-slate-800/80 text-cyan-100 hover:bg-slate-700',
                   )}
                 >
                   <Icon className="size-4" />
@@ -140,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               );
             })}
           </div>
-          <Button variant="ghost" size="sm" className="shrink-0" onClick={logout}>
+          <Button variant="ghost" size="sm" className="shrink-0 text-cyan-200 hover:bg-slate-800 hover:text-cyan-100" onClick={logout}>
             <LogOut className="mr-2 size-4" />
             Salir
           </Button>

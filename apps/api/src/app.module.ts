@@ -12,6 +12,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { AttemptsModule } from './attempts/attempts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AdminModule } from './admin/admin.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AdminModule } from './admin/admin.module';
     AttemptsModule,
     AnalyticsModule,
     AdminModule,
+    AssignmentsModule,
   ],
   providers: [
     {

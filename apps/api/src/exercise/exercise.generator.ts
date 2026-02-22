@@ -172,8 +172,19 @@ export class ExerciseGeneratorService {
     }
 
     if (operation === 'x') {
-      const a = this.randomInt(2, ageGroup === AgeGroup.AGE_10_12 ? 30 : 12);
-      const b = this.randomInt(2, ageGroup === AgeGroup.AGE_10_12 ? 20 : 12);
+      let a: number;
+      let b: number;
+      if (ageGroup === AgeGroup.AGE_10_12) {
+        a = this.randomInt(2, 30);
+        b = this.randomInt(2, 20);
+      } else if (ageGroup === AgeGroup.AGE_8_9 && level >= 6) {
+        // 3-digit × 1-digit word problem
+        a = this.randomInt(100, 999);
+        b = this.randomInt(2, 9);
+      } else {
+        a = this.randomInt(2, 12);
+        b = this.randomInt(2, 12);
+      }
       return {
         category: ExerciseCategory.WORD_PROBLEM,
         prompt: `${person} guarda ${b} ${object} en cada caja y tiene ${a} cajas. ¿${quantifier} ${object} hay en total?`,
@@ -186,14 +197,18 @@ export class ExerciseGeneratorService {
       };
     }
 
-    const divisor = this.randomInt(
-      2,
-      ageGroup === AgeGroup.AGE_10_12 ? 15 : 12,
-    );
-    const quotient = this.randomInt(
-      2,
-      ageGroup === AgeGroup.AGE_10_12 ? 25 : 12,
-    );
+    let divisor: number;
+    let quotient: number;
+    if (ageGroup === AgeGroup.AGE_10_12) {
+      divisor = this.randomInt(2, 15);
+      quotient = this.randomInt(2, 25);
+    } else if (ageGroup === AgeGroup.AGE_8_9 && level >= 6) {
+      divisor = this.randomInt(2, 9);
+      quotient = this.randomInt(Math.ceil(100 / 9), Math.floor(999 / 2));
+    } else {
+      divisor = this.randomInt(2, 12);
+      quotient = this.randomInt(2, 12);
+    }
     const dividend = divisor * quotient;
 
     return {
@@ -210,12 +225,12 @@ export class ExerciseGeneratorService {
 
   private generateAddends(ageGroup: AgeGroup, max: number): [number, number] {
     if (ageGroup === AgeGroup.INFANT_3_5) {
-      const a = this.randomInt(0, 10);
-      const b = this.randomInt(0, 10 - a);
+      const a = this.randomInt(1, 9);
+      const b = this.randomInt(1, 10 - a);
       return [a, b];
     }
 
-    return [this.randomInt(0, max), this.randomInt(0, max)];
+    return [this.randomInt(1, max), this.randomInt(1, max)];
   }
 
   private generateSubtractionOperands(
@@ -223,13 +238,13 @@ export class ExerciseGeneratorService {
     max: number,
   ): [number, number] {
     if (ageGroup === AgeGroup.INFANT_3_5) {
-      const a = this.randomInt(0, 10);
-      const b = this.randomInt(0, a);
+      const a = this.randomInt(2, 10);
+      const b = this.randomInt(1, a - 1);
       return [a, b];
     }
 
-    const a = this.randomInt(1, max);
-    const b = this.randomInt(0, a);
+    const a = this.randomInt(2, max);
+    const b = this.randomInt(1, a - 1);
     return [a, b];
   }
 
@@ -239,6 +254,15 @@ export class ExerciseGeneratorService {
     level: number,
   ): [number, number] {
     if (ageGroup === AgeGroup.AGE_8_9) {
+      if (level >= 8) {
+        // 3-digit × 1-2-digit (e.g. 345 × 12)
+        return [this.randomInt(100, 999), this.randomInt(2, 12)];
+      }
+      if (level >= 6) {
+        // 3-digit × 1-digit (e.g. 234 × 7)
+        return [this.randomInt(100, 999), this.randomInt(2, 9)];
+      }
+      // Times tables
       return [this.randomInt(2, 12), this.randomInt(2, 12)];
     }
 
@@ -249,8 +273,8 @@ export class ExerciseGeneratorService {
     }
 
     return [
-      this.randomInt(0, Math.min(max, 12)),
-      this.randomInt(0, Math.min(max, 12)),
+      this.randomInt(1, Math.min(max, 12)),
+      this.randomInt(1, Math.min(max, 12)),
     ];
   }
 
@@ -259,21 +283,32 @@ export class ExerciseGeneratorService {
     max: number,
     level: number,
   ) {
-    const divisor = this.randomInt(
-      2,
-      ageGroup === AgeGroup.AGE_10_12 ? 20 : 12,
-    );
-
     if (ageGroup === AgeGroup.AGE_10_12 && level >= 8) {
+      const divisor = this.randomInt(2, 20);
       const quotient = this.randomInt(2, 50);
       const remainder = this.randomInt(0, divisor - 1);
       const dividend = divisor * quotient + remainder;
       return { dividend, divisor, quotient, remainder };
     }
 
+    if (ageGroup === AgeGroup.AGE_8_9 && level >= 6) {
+      // 3-digit dividend ÷ 1-digit divisor (exact division)
+      const divisor = level >= 8 ? this.randomInt(2, 12) : this.randomInt(2, 9);
+      const quotient = this.randomInt(
+        Math.ceil(100 / divisor),
+        Math.floor(999 / divisor),
+      );
+      const dividend = divisor * quotient;
+      return { dividend, divisor, quotient, remainder: 0 };
+    }
+
+    const divisor = this.randomInt(
+      2,
+      ageGroup === AgeGroup.AGE_10_12 ? 20 : 12,
+    );
     const quotient = this.randomInt(
-      1,
-      Math.max(2, Math.floor(max / Math.max(2, divisor))),
+      2,
+      Math.max(3, Math.floor(max / Math.max(2, divisor))),
     );
     const dividend = divisor * quotient;
 
@@ -297,6 +332,10 @@ export class ExerciseGeneratorService {
     }
 
     if (ageGroup === AgeGroup.AGE_8_9) {
+      // Levels 1-5: 2-digit (max 30→70), Levels 6-8: 3-digit (max 500→999)
+      if (normalizedLevel >= 6) {
+        return { max: Math.min(999, 300 + (normalizedLevel - 6) * 350) };
+      }
       return { max: Math.min(100, 20 + normalizedLevel * 10) };
     }
 

@@ -14,5 +14,13 @@ export const studentOverviewQuerySchema = z.object({
   to: z.string().datetime().optional(),
 });
 
+export const studentSessionsQuerySchema = z.object({
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  category: z.enum(EXERCISE_CATEGORIES).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type StudentHistoryQueryDto = z.infer<typeof studentHistoryQuerySchema>;
 export type StudentOverviewQueryDto = z.infer<typeof studentOverviewQuerySchema>;
+export type StudentSessionsQueryDto = z.infer<typeof studentSessionsQuerySchema>;

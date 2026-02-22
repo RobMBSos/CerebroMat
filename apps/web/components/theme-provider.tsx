@@ -47,7 +47,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [theme, ready],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const Provider = ThemeContext.Provider as any;
+  return <Provider value={value}>{children}</Provider>;
 }
 
 export function useTheme() {

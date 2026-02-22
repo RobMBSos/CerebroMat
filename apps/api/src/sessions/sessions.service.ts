@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   AgeGroup,
+  Difficulty,
   ExerciseCategory,
   ExerciseMode,
   Role,
@@ -26,7 +27,7 @@ export class SessionsService {
 
   async startSession(
     user: AuthUser,
-    input: StartSessionDto & { classId?: string; studentId?: string },
+    input: StartSessionDto & { classId?: string; studentId?: string; difficulty?: string },
   ) {
     const studentId = this.resolveStudentId(user, input.studentId);
 
@@ -49,6 +50,13 @@ export class SessionsService {
     await this.ensureStudentSkills(studentId, categories);
     const skillLevels = await this.getSkillLevels(studentId, categories);
 
+    const difficulty = (input.difficulty as Difficulty) ?? Difficulty.NORMAL;
+    const adjustedLevels = this.applyDifficultyOffset(
+      skillLevels,
+      difficulty,
+      input.ageGroup,
+    );
+
     await this.syncAgeGroup(studentId, student.studentProfile, input.ageGroup);
 
     const session = await this.prisma.exerciseSession.create({
@@ -58,6 +66,7 @@ export class SessionsService {
         ageGroup: input.ageGroup,
         mode: input.mode,
         totalExercises: input.totalExercises,
+        difficulty,
         status: SessionStatus.STARTED,
       },
     });
@@ -67,7 +76,7 @@ export class SessionsService {
       mode: input.mode,
       categories,
       totalExercises: input.totalExercises,
-      currentLevels: skillLevels,
+      currentLevels: adjustedLevels,
     });
 
     return {
@@ -355,5 +364,34 @@ export class SessionsService {
       correctAttempts,
       averageResponseMs,
     };
+  }
+
+  private applyDifficultyOffset(
+    levels: Record<ExerciseCategory, number>,
+    difficulty: Difficulty,
+    ageGroup: AgeGroup,
+  ): Record<ExerciseCategory, number> {
+    if (difficulty === Difficulty.NORMAL) {
+      return levels;
+    }
+
+    const maxLevelByAge: Record<AgeGroup, number> = {
+      [AgeGroup.INFANT_3_5]: 4,
+      [AgeGroup.AGE_6_7]: 6,
+      [AgeGroup.AGE_8_9]: 8,
+      [AgeGroup.AGE_10_12]: 12,
+    };
+    const maxLevel = maxLevelByAge[ageGroup];
+    const offset = difficulty === Difficulty.EASY ? -2 : 2;
+
+    const result = {} as Record<ExerciseCategory, number>;
+    for (const [category, level] of Object.entries(levels)) {
+      result[category as ExerciseCategory] = Math.max(
+        1,
+        Math.min(maxLevel, level + offset),
+      );
+    }
+
+    return result;
   }
 }

@@ -11,6 +11,7 @@ import { apiRequest } from '@/lib/api';
 type AgeGroup = 'INFANT_3_5' | 'AGE_6_7' | 'AGE_8_9' | 'AGE_10_12';
 type Mode = 'OPERATIONS' | 'WORD_PROBLEMS' | 'MIXED';
 type Category = 'ADDITION' | 'SUBTRACTION' | 'MULTIPLICATION' | 'DIVISION' | 'WORD_PROBLEM';
+type DifficultyLevel = 'EASY' | 'NORMAL' | 'HARD';
 type PromptLayout = 'INLINE' | 'STACKED';
 
 type GeneratedExercise = {
@@ -31,6 +32,12 @@ type HistoryBaselineResponse = {
 const layoutOptions: Array<{ label: string; value: PromptLayout }> = [
   { label: 'En línea', value: 'INLINE' },
   { label: 'Vertical', value: 'STACKED' },
+];
+
+const difficultyOptions: Array<{ label: string; value: DifficultyLevel }> = [
+  { label: 'Fácil', value: 'EASY' },
+  { label: 'Normal', value: 'NORMAL' },
+  { label: 'Difícil', value: 'HARD' },
 ];
 
 const sessionSizeOptions = [10, 20, 30, 40, 50] as const;
@@ -76,11 +83,22 @@ const categoryOptions: Array<{ label: string; value: Category }> = [
   { label: 'Problemas', value: 'WORD_PROBLEM' },
 ];
 
-export function StudentExercisePanel() {
+type StudentExercisePanelProps = {
+  assignmentId?: string;
+  assignmentTitle?: string;
+  onAssignmentComplete?: () => void;
+};
+
+export function StudentExercisePanel({
+  assignmentId,
+  assignmentTitle,
+  onAssignmentComplete,
+}: StudentExercisePanelProps = {}) {
   const { session } = useAuth();
   const [ageGroup, setAgeGroup] = useState<AgeGroup>('AGE_8_9');
   const [mode, setMode] = useState<Mode>('MIXED');
   const [categories, setCategories] = useState<Category[]>(['ADDITION', 'SUBTRACTION', 'WORD_PROBLEM']);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>('NORMAL');
   const [promptLayout, setPromptLayout] = useState<PromptLayout>('STACKED');
   const [totalExercises, setTotalExercises] = useState<number>(10);
 
@@ -171,29 +189,40 @@ export function StudentExercisePanel() {
     setError(null);
     setSummary(null);
 
-    const operationSelection = categories.filter((item) => item !== 'WORD_PROBLEM');
-    const safeOperations = operationSelection.length > 0 ? operationSelection : ['ADDITION'];
-    const resolvedCategories =
-      mode === 'WORD_PROBLEMS'
-        ? ['WORD_PROBLEM']
-        : mode === 'OPERATIONS'
-          ? safeOperations
-          : [...safeOperations, 'WORD_PROBLEM'];
-
     try {
-      const data = await apiRequest<{ session: { id: string }; exercises: GeneratedExercise[] }>(
-        '/sessions/start',
-        {
-          method: 'POST',
-          auth: true,
-          body: {
-            ageGroup,
-            mode,
-            categories: resolvedCategories.length > 0 ? resolvedCategories : ['ADDITION'],
-            totalExercises,
+      let data: { session: { id: string }; exercises: GeneratedExercise[] };
+
+      if (assignmentId) {
+        // Start via assignment endpoint
+        data = await apiRequest<{ session: { id: string }; exercises: GeneratedExercise[] }>(
+          `/assignments/${assignmentId}/start`,
+          { method: 'POST', auth: true },
+        );
+      } else {
+        const operationSelection = categories.filter((item) => item !== 'WORD_PROBLEM');
+        const safeOperations = operationSelection.length > 0 ? operationSelection : ['ADDITION'];
+        const resolvedCategories =
+          mode === 'WORD_PROBLEMS'
+            ? ['WORD_PROBLEM']
+            : mode === 'OPERATIONS'
+              ? safeOperations
+              : [...safeOperations, 'WORD_PROBLEM'];
+
+        data = await apiRequest<{ session: { id: string }; exercises: GeneratedExercise[] }>(
+          '/sessions/start',
+          {
+            method: 'POST',
+            auth: true,
+            body: {
+              ageGroup,
+              mode,
+              categories: resolvedCategories.length > 0 ? resolvedCategories : ['ADDITION'],
+              totalExercises,
+              difficulty,
+            },
           },
-        },
-      );
+        );
+      }
 
       setSessionId(data.session.id);
       setExercises(data.exercises);
@@ -315,6 +344,9 @@ export function StudentExercisePanel() {
       setFeedback(null);
       setAwaitingAdvance(false);
       setIsFinalAwaitingAdvance(false);
+      if (onAssignmentComplete) {
+        onAssignmentComplete();
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No se pudo guardar la sesión');
     } finally {
@@ -343,13 +375,23 @@ export function StudentExercisePanel() {
   return (
     <Card className="border-cyan-200 bg-gradient-to-br from-[#ecfeff] to-white dark:border-slate-700 dark:from-slate-900 dark:to-slate-950">
       <CardHeader>
-        <CardTitle className="text-2xl">Zona de Ejercicios</CardTitle>
+        <CardTitle className="text-2xl">
+          {assignmentTitle ? `Tarea: ${assignmentTitle}` : 'Zona de Ejercicios'}
+        </CardTitle>
         <CardDescription>
-          Elige edad, modo, categorías y tamaño de sesión.
+          {assignmentTitle
+            ? 'Completa la tarea asignada por tu profesor.'
+            : 'Elige edad, modo, categorías y tamaño de sesión.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        {!sessionId ? (
+        {!sessionId && assignmentId ? (
+          <Button className="h-12 w-full text-base" onClick={() => void startSession()}>
+            Empezar tarea
+          </Button>
+        ) : null}
+
+        {!sessionId && !assignmentId ? (
           <>
             <div className="space-y-2">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Edad</p>
@@ -403,6 +445,26 @@ export function StudentExercisePanel() {
                         : 'bg-indigo-100 text-indigo-900 hover:bg-indigo-200 dark:bg-slate-800 dark:text-indigo-100 dark:hover:bg-slate-700'
                     }`}
                     onClick={() => setPromptLayout(option.value)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Dificultad</p>
+              <div className="flex flex-wrap gap-2">
+                {difficultyOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${
+                      difficulty === option.value
+                        ? 'bg-amber-600 text-white dark:bg-amber-500 dark:text-slate-950'
+                        : 'bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-slate-800 dark:text-amber-100 dark:hover:bg-slate-700'
+                    }`}
+                    onClick={() => setDifficulty(option.value)}
                     type="button"
                   >
                     {option.label}

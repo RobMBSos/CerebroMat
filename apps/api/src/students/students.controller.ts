@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import {
   studentHistoryQuerySchema,
   studentOverviewQuerySchema,
+  studentSessionsQuerySchema,
 } from '@cerebromat/shared';
 import { z } from 'zod';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -30,6 +31,16 @@ export class StudentsController {
     query: z.infer<typeof studentOverviewQuerySchema>,
   ) {
     return this.studentsService.getStudentsOverview(user, query);
+  }
+
+  @Get(':id/sessions')
+  sessions(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query(new ZodValidationPipe(studentSessionsQuerySchema))
+    query: z.infer<typeof studentSessionsQuerySchema>,
+  ) {
+    return this.studentsService.getStudentSessions(user, id, query);
   }
 
   @Get(':id/history')
