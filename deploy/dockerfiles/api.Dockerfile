@@ -21,12 +21,13 @@ RUN pnpm --filter @cerebromat/shared build \
  && pnpm --filter @cerebromat/api db:generate \
  && pnpm --filter @cerebromat/api build
 
-# Use pnpm deploy to create a flat node_modules with all deps (including Prisma client)
+# Use pnpm deploy to create a flat node_modules with all prod deps
 RUN pnpm --filter @cerebromat/api deploy --prod /app/deploy
 
-# Copy built output and Prisma files into the deploy directory
+# Copy built output and Prisma files, then regenerate client in deploy dir
 RUN cp -r /app/apps/api/dist /app/deploy/dist \
- && cp -r /app/apps/api/prisma /app/deploy/prisma
+ && cp -r /app/apps/api/prisma /app/deploy/prisma \
+ && cd /app/deploy && npx prisma generate
 
 # ── Stage 2: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
