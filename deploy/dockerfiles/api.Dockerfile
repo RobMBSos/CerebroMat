@@ -1,61 +1,44 @@
-# ── Stage 1: Dependencies ────────────────────────────────────────────────────
-FROM node:22-alpine AS deps
+# ── Stage 1: Install & Build ─────────────────────────────────────────────────
+FROM node:22-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 
-# Copy only lockfile + workspace configs for cached install
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+# Copy lockfile + workspace manifests for cached install
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
 RUN pnpm fetch
 RUN pnpm install --frozen-lockfile --offline
 
-# ── Stage 2: Builder ─────────────────────────────────────────────────────────
-FROM node:22-alpine AS builder
-
-RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+# Copy source code
 COPY packages/shared packages/shared
 COPY apps/api apps/api
 
-# Build shared package first, then generate Prisma client, then build API
+# Build shared → generate Prisma client → build API
 RUN pnpm --filter @cerebromat/shared build \
  && pnpm --filter @cerebromat/api db:generate \
  && pnpm --filter @cerebromat/api build
 
-# ── Stage 3: Production runner ───────────────────────────────────────────────
+# Use pnpm deploy to create a flat node_modules with all deps (including Prisma client)
+RUN pnpm --filter @cerebromat/api deploy --prod /app/deploy
+
+# Copy built output and Prisma files into the deploy directory
+RUN cp -r /app/apps/api/dist /app/deploy/dist \
+ && cp -r /app/apps/api/prisma /app/deploy/prisma
+
+# ── Stage 2: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
 
 RUN apk add --no-cache dumb-init
-
 WORKDIR /app
 
 # Non-root user
 RUN addgroup -g 1001 -S nestjs && adduser -S nestjs -u 1001 -G nestjs
 
-# Copy built application
-COPY --from=builder --chown=nestjs:nestjs /app/apps/api/dist ./dist
-COPY --from=builder --chown=nestjs:nestjs /app/apps/api/node_modules ./node_modules
-COPY --from=builder --chown=nestjs:nestjs /app/apps/api/package.json ./package.json
-
-# Copy Prisma schema + migrations (needed for prisma migrate deploy)
-COPY --from=builder --chown=nestjs:nestjs /app/apps/api/prisma ./prisma
-
-# Copy shared dist (referenced by API at runtime)
-COPY --from=builder --chown=nestjs:nestjs /app/packages/shared/dist ./node_modules/@cerebromat/shared/dist
-COPY --from=builder --chown=nestjs:nestjs /app/packages/shared/package.json ./node_modules/@cerebromat/shared/package.json
-
-# Copy generated Prisma client
-COPY --from=builder --chown=nestjs:nestjs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nestjs:nestjs /app/node_modules/@prisma ./node_modules/@prisma
+# Copy the flat deployed app
+COPY --from=builder --chown=nestjs:nestjs /app/deploy ./
 
 USER nestjs
 
