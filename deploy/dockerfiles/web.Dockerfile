@@ -27,6 +27,8 @@ COPY packages/shared packages/shared
 COPY apps/web apps/web
 
 # Build shared package first, then build Next.js in standalone mode
+# NEXT_PUBLIC_ vars are inlined at build time
+ENV NEXT_PUBLIC_API_URL=/api
 RUN pnpm --filter @cerebromat/shared build \
  && pnpm --filter @cerebromat/web build
 

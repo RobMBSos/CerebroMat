@@ -18,6 +18,8 @@ COPY packages/shared packages/shared
 COPY apps/mobile apps/mobile
 
 # Build shared → export Expo as static web SPA
+# EXPO_PUBLIC_ vars are inlined at build time
+ENV EXPO_PUBLIC_API_URL=/api
 RUN pnpm --filter @cerebromat/shared build \
  && cd apps/mobile && npx expo export --platform web
 
