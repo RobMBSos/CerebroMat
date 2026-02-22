@@ -10,13 +10,22 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  # ── Prepare lowercase image prefix ──────────────────────────────────────────
+  prepare:
+    name: Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      image_prefix: ${{ steps.lower.outputs.prefix }}
+    steps:
+      - id: lower
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
   # ── Job 1: Test ────────────────────────────────────────────────────────────
   test:
     name: Test
@@ -71,7 +80,7 @@ jobs:
   # ── Job 2: Build Docker images (parallel matrix) ──────────────────────────
   build:
     name: Build ${{ matrix.app }}
-    needs: test
+    needs: [test, prepare]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -93,8 +102,8 @@ jobs:
           file: deploy/dockerfiles/${{ matrix.app }}.Dockerfile
           push: true
           tags: |
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:${{ github.sha }}
-            ${{ env.IMAGE_PREFIX }}/${{ matrix.app }}:latest
+            ${{ needs.prepare.outputs.image_prefix }}/${{ matrix.app }}:${{ github.sha }}
+            ${{ needs.prepare.outputs.image_prefix }}/${{ matrix.app }}:latest
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
