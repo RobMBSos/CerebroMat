@@ -318,12 +318,18 @@ importers:
         specifier: ^3.24.1
         version: 3.25.76
     devDependencies:
+      '@eslint/js':
+        specifier: ^9.18.0
+        version: 9.39.3
       '@types/node':
         specifier: ^22.10.7
         version: 22.19.11
       eslint:
         specifier: ^9.18.0
         version: 9.39.3(jiti@2.6.1)
+      globals:
+        specifier: ^16.0.0
+        version: 16.5.0
       prettier:
         specifier: ^3.4.2
         version: 3.8.1
@@ -333,6 +339,9 @@ importers:
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.20.0
+        version: 8.56.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.11)(jsdom@20.0.3)(lightningcss@1.31.1)(terser@5.46.0)
