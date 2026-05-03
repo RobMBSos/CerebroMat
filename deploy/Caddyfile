@@ -22,6 +22,12 @@
 		}
 	}
 
+	# Temporary block for observed RCE probes (?z=<shell command>)
+	@blockRceQuery query z=*
+	handle @blockRceQuery {
+		respond 403
+	}
+
 	# ── API routes ────────────────────────────────────────────────────────
 	handle /api/* {
 		reverse_proxy api:4001
