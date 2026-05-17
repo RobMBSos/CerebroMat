@@ -1,5 +1,5 @@
 # ── Stage 1: Install & Build ─────────────────────────────────────────────────
-FROM node:22-alpine AS builder
+FROM node:22.22.3-alpine3.23 AS builder
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
@@ -24,7 +24,7 @@ RUN pnpm --filter @cerebromat/shared build \
  && cd apps/mobile && npx expo export --platform web
 
 # ── Stage 2: Serve static files with Caddy ───────────────────────────────────
-FROM caddy:2-alpine AS runner
+FROM caddy:2.11.3-alpine AS runner
 
 # Copy exported static site
 COPY --from=builder /app/apps/mobile/dist /srv

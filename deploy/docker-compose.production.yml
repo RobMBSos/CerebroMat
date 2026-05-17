@@ -3,7 +3,7 @@ name: cerebromat
 services:
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.14-alpine3.23
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -97,7 +97,7 @@ services:
 
   # ── Caddy Reverse Proxy ────────────────────────────────────────────────────
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.3-alpine
     restart: unless-stopped
     depends_on:
       api:
