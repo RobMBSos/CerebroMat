@@ -48,3 +48,16 @@
 		reverse_proxy web:3000
 	}
 }
+
+# Independent static site. Application files are deployed to /srv/cromos.
+cromos.cerebromat.es {
+	tls {$ACME_EMAIL}
+	encode zstd gzip
+	root * /srv/cromos
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	file_server
+}

@@ -2,7 +2,7 @@
   "name": "cerebromat",
   "private": true,
   "version": "1.0.0",
-  "description": "Monorepo local para app web + móvil de matemáticas escolares",
+  "description": "Monorepo local para app web + m\u00f3vil de matem\u00e1ticas escolares",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "concurrently -n shared,api,web,mobile -c yellow,green,blue,magenta \"pnpm --filter @cerebromat/shared dev\" \"pnpm --filter @cerebromat/api dev\" \"pnpm --filter @cerebromat/web dev\" \"pnpm --filter @cerebromat/mobile dev\"",
@@ -17,10 +17,21 @@
   },
   "pnpm": {
     "overrides": {
-      "defu": "6.1.7"
+      "defu": "6.1.7",
+      "proxy-addr": "2.0.8",
+      "compression": "^1.8.2",
+      "multer": "^2.3.0",
+      "tar": "^7.5.21"
+    },
+    "packageExtensions": {
+      "expo-router@4": {
+        "dependencies": {
+          "query-string": "^7.1.3"
+        }
+      }
     }
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.2.5"
   }
 }

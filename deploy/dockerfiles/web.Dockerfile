@@ -1,5 +1,5 @@
 # ── Stage 1: Dependencies ────────────────────────────────────────────────────
-FROM node:22.22.3-alpine3.23 AS deps
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
@@ -13,7 +13,7 @@ RUN pnpm fetch
 RUN pnpm install --frozen-lockfile --offline
 
 # ── Stage 2: Builder ─────────────────────────────────────────────────────────
-FROM node:22.22.3-alpine3.23 AS builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
@@ -33,9 +33,9 @@ RUN pnpm --filter @cerebromat/shared build \
  && pnpm --filter @cerebromat/web build
 
 # ── Stage 3: Production runner ───────────────────────────────────────────────
-FROM node:22.22.3-alpine3.23 AS runner
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
 
-RUN npm install -g npm@11.14.1 && npm cache clean --force
+RUN npm install -g npm@11.21.0 && npm cache clean --force
 WORKDIR /app
 
 # Non-root user

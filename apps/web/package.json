@@ -10,26 +10,26 @@
   },
   "dependencies": {
     "@cerebromat/shared": "workspace:^",
-    "axios": "^1.16.1",
+    "axios": "^1.20.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
-    "next": "15.5.18",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^3.7.0",
-    "tailwind-merge": "^3.5.0",
-    "zod": "^3.24.1"
+    "next": "15.5.27",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1",
+    "tailwind-merge": "^3.7.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "15.5.18",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "@eslint/eslintrc": "^3.3.7",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "15.5.27",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
   }
 }
