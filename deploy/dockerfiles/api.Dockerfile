@@ -1,5 +1,5 @@
 # ── Stage 1: Install & Build ─────────────────────────────────────────────────
-FROM node:22.22.3-alpine3.23 AS builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
@@ -30,9 +30,9 @@ RUN cp -r /app/apps/api/dist /app/deploy/dist \
  && cd /app/deploy && npx prisma generate
 
 # ── Stage 2: Production runner ───────────────────────────────────────────────
-FROM node:22.22.3-alpine3.23 AS runner
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
 
-RUN npm install -g npm@11.14.1 && npm cache clean --force
+RUN npm install -g npm@11.21.0 && npm cache clean --force
 RUN apk add --no-cache dumb-init
 WORKDIR /app
 
