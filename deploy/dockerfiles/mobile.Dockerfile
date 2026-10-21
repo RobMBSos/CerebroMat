@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy the entire monorepo for full install (Expo needs all hoisted deps)
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc tsconfig.base.json ./
+COPY patches ./patches
 COPY apps/mobile/package.json apps/mobile/package.json
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
@@ -29,8 +30,8 @@ RUN apk add --no-cache git
 WORKDIR /src
 RUN git init . \
  && git remote add origin https://github.com/caddyserver/caddy.git \
- && git fetch --depth 1 origin 72dd0fb067f6d7826c7f79907670ba4a713bfe37 \
- && git checkout --detach FETCH_HEAD \
+ && git fetch --depth 1 origin tag v2.11.7 \
+ && git checkout --detach 72dd0fb067f6d7826c7f79907670ba4a713bfe37 \
  && go get golang.org/x/net@v0.60.0 \
  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/caddy ./cmd/caddy
 

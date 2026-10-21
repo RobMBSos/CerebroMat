@@ -15,3 +15,11 @@ PostCSS is pinned to 8.5.29 and deepmerge-ts to 8.0.0. Caddy 2.11.7 and gosu 1.1
 The deployment workflow builds all five images and requires a high/critical runtime vulnerability scan to pass before deployment. The production compose file must reference this repository's `caddy` and `postgres` images, as shown in `docker-compose.production.yml`. Preserve the host's existing Caddyfile, including its Cromos routes; the workflow does not replace host configuration.
 
 Cromos is maintained separately under /opt/cromos with private administration and data in /var/lib/cromos. Never deploy local test data or run integration fixtures against its production database.
+
+## Build dependencies
+
+Removed the unused Vitest dependency from the shared package (it had no test files), eliminating its vulnerable Vite and Tinypool tree. Shared registration rules remain covered by API tests. Updated Expo's XML parser to @xmldom/xmldom 0.8.15.
+
+Metro requires the image-size 1.x CommonJS API, so `patches/image-size@1.2.1.patch` rejects truncated, zero-length and out-of-bounds boxes and ICNS entries. This prevents the JXL/HEIF and ICNS parser loops without changing Metro's API. Child-process regression tests enforce a time budget and also verify ordinary PNG/ICNS dimensions. Version-only dependency audits will still report image-size 1.2.1; the locked patch hash and regression tests are the evidence for remediation.
+
+The remaining high advisories for `braces` and `node-forge` have no published fixed version in the npm advisory data checked on 21 October. They are in the Expo/build toolchain and are absent from deployed runtime images. Do not run development servers publicly or process untrusted project files/certificates with that toolchain. Recheck upstream releases before the next toolchain update.

@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy lockfile + workspace manifests for cached install
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY patches ./patches
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
 

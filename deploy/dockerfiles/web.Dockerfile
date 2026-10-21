@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy only lockfile + workspace configs for cached install
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY patches ./patches
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
 
@@ -23,6 +24,7 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
+COPY patches ./patches
 COPY packages/shared packages/shared
 COPY apps/web apps/web
 
