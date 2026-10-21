@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        app: [api, web, mobile]
+        app: [api, web, mobile, caddy, postgres]
     steps:
       - uses: actions/checkout@v4
 
@@ -109,6 +109,15 @@ jobs:
             ${{ needs.prepare.outputs.image_prefix }}/${{ matrix.app }}:latest
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Check runtime image for high and critical vulnerabilities
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD aquasec/trivy:0.76.1 \
+            image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+            ${{ needs.prepare.outputs.image_prefix }}/${{ matrix.app }}:${{ github.sha }}
 
   # ── Job 3: Deploy to VPS ──────────────────────────────────────────────────
   deploy:
@@ -143,9 +152,10 @@ jobs:
             docker compose -f docker-compose.production.yml pull
 
             # Run database migrations (uses DATABASE_URL from compose env)
-            docker compose -f docker-compose.production.yml run --rm api npx prisma migrate deploy
+            docker compose -f docker-compose.production.yml run --rm api node node_modules/prisma/build/index.js migrate deploy
 
             # Rolling restart (each service waits for health check)
+            docker compose -f docker-compose.production.yml up -d --no-deps --wait postgres
             docker compose -f docker-compose.production.yml up -d --no-deps --wait api
             docker compose -f docker-compose.production.yml up -d --no-deps --wait web
             docker compose -f docker-compose.production.yml up -d --no-deps --wait mobile

@@ -36,6 +36,15 @@ export class AuthService {
     input: RegisterDto,
     meta?: { userAgent?: string; ipAddress?: string },
   ) {
+    // Enforce this at the service boundary as well as request validation.
+    if (
+      input.role &&
+      ![Role.TEACHER, Role.PARENT, Role.STUDENT].includes(input.role)
+    ) {
+      throw new BadRequestException(
+        'Role is not available for public registration',
+      );
+    }
     const existing = await this.prisma.user.findUnique({
       where: { email: input.email },
     });

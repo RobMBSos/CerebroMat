@@ -28,7 +28,7 @@ export class AuthController {
         fullName: { type: 'string' },
         role: {
           type: 'string',
-          enum: ['ADMIN', 'TEACHER', 'PARENT', 'STUDENT'],
+          enum: ['TEACHER', 'PARENT', 'STUDENT'],
         },
       },
     },

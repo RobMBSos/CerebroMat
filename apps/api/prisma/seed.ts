@@ -10,7 +10,11 @@ import {
 
 const prisma = new PrismaClient();
 
-const DEMO_PASSWORD = 'Demo12345!';
+// Demo fixtures must never reset credentials on a production database.
+if (process.env.NODE_ENV === 'production') {
+  throw new Error('Demo seeding is disabled in production');
+}
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? 'Demo12345!';
 
 async function upsertUser(input: {
   email: string;

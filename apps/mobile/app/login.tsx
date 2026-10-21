@@ -4,8 +4,8 @@ import { useAuth } from '@/lib/auth';
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('student@demo.local');
-  const [password, setPassword] = useState('Demo12345!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +48,6 @@ export default function LoginScreen() {
         >
           <Text style={{ color: '#ffffff', fontWeight: '700' }}>{loading ? 'Entrando...' : 'Entrar'}</Text>
         </Pressable>
-        <Text style={{ fontSize: 12, color: '#475569' }}>Demo: student@demo.local / Demo12345!</Text>
       </View>
     </SafeAreaView>
   );

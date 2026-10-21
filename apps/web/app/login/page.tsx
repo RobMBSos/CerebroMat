@@ -13,8 +13,8 @@ import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('teacher@demo.local');
-  const [password, setPassword] = useState('Demo12345!');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,10 +127,7 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <div className="mt-4 rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2.5 text-xs text-cyan-200/70">
-            <p className="font-semibold text-cyan-300/80">Credenciales demo</p>
-            <p className="mt-0.5">teacher@demo.local / Demo12345!</p>
-          </div>
+
         </div>
       </div>
 
