@@ -1,19 +1,7 @@
 import type { Metadata } from 'next';
-import { Baloo_2, Nunito } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme-provider';
+import './fonts.css';
 import './globals.css';
-
-const baloo = Baloo_2({
-  subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['600', '700', '800'],
-});
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  variable: '--font-body',
-  weight: ['400', '500', '600', '700'],
-});
 
 export const metadata: Metadata = {
   title: 'CerebroMat School',
@@ -46,9 +34,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <link rel="preload" href="/fonts/a65324f02aa278dc-s.p.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/ee40bb094c99a29a-s.p.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
-      <body className={`${baloo.variable} ${nunito.variable}`}>
+      <body>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
