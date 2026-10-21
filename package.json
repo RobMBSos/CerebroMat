@@ -2,7 +2,7 @@
   "name": "cerebromat",
   "private": true,
   "version": "1.0.0",
-  "description": "Monorepo local para app web + m\u00f3vil de matem\u00e1ticas escolares",
+  "description": "Monorepo local para app web + móvil de matemáticas escolares",
   "packageManager": "pnpm@9.15.4",
   "scripts": {
     "dev": "concurrently -n shared,api,web,mobile -c yellow,green,blue,magenta \"pnpm --filter @cerebromat/shared dev\" \"pnpm --filter @cerebromat/api dev\" \"pnpm --filter @cerebromat/web dev\" \"pnpm --filter @cerebromat/mobile dev\"",
@@ -24,7 +24,10 @@
       "tar": "^7.5.21",
       "postcss": "8.5.29",
       "deepmerge-ts": "8.0.0",
-      "@xmldom/xmldom": "0.8.15"
+      "@xmldom/xmldom": "0.8.15",
+      "uuid": "11.1.1",
+      "esbuild": "0.28.1",
+      "js-yaml@>=5 <5.4.1": "5.4.1"
     },
     "packageExtensions": {
       "expo-router@4": {
@@ -34,7 +37,8 @@
       }
     },
     "patchedDependencies": {
-      "image-size@1.2.1": "patches/image-size@1.2.1.patch"
+      "image-size@1.2.1": "patches/image-size@1.2.1.patch",
+      "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch"
     }
   },
   "devDependencies": {
