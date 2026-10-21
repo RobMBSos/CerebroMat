@@ -27,3 +27,5 @@ The remaining high advisories for `braces` and `node-forge` have no published fi
 Lower-severity fixes also update js-yaml 5.x to 5.4.1, UUID to 11.1.1 and esbuild to 0.28.1. The upstream decode-uri-component 0.5.0 decoder is backported with a CommonJS export in `patches/decode-uri-component@0.2.2.patch`, retaining query-string 7 compatibility. Tests exercise normal Unicode, malformed escapes and a long malformed URL under a child-process time limit. The original package fails with a stack overflow on that regression input. Version-only audits still flag 0.2.2; the patch hash and tests establish the fix.
 
 One additional moderate build-only advisory in `sprintf-js` has no upstream fixed version. Together with braces and node-forge, it remains a tracked development-toolchain limitation; none is included in the deployed runtime images.
+
+All Alpine runtime stages update zlib to the distribution security revision. The gosu rebuild also updates moby/sys/user to 0.4.1 and x/sys to 0.44.0. Full-severity scans supplement the deployment's high/critical gate.

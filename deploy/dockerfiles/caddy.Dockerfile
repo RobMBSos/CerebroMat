@@ -10,4 +10,5 @@ RUN git init . \
  && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/caddy ./cmd/caddy
 
 FROM caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+RUN apk upgrade --no-cache zlib
 COPY --from=caddy-builder /out/caddy /usr/bin/caddy
