@@ -37,7 +37,7 @@ RUN pnpm --filter @cerebromat/shared build \
 # ── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
 
-RUN apk upgrade --no-cache zlib
+RUN apk upgrade --no-cache
 
 # Package managers are build tools; omit them from the runtime image.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-* \

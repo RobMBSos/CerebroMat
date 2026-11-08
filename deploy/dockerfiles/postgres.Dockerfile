@@ -11,4 +11,4 @@ RUN git init . \
 
 FROM postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
 COPY --from=gosu-builder /out/gosu /usr/local/bin/gosu
-RUN apk upgrade --no-cache zlib && gosu nobody true
+RUN apk upgrade --no-cache && gosu nobody true

@@ -1,0 +1,252 @@
+diff --git a/acme/challenge.go b/acme/challenge.go
+index 4e1e3f5..17134db 100644
+--- a/acme/challenge.go
++++ b/acme/challenge.go
+@@ -678,9 +678,9 @@ func parseAndVerifyWireAccessToken(v wireVerifyParams) (*wireAccessToken, *wireD
+ 	}
+ 
+ 	if err := accessToken.ValidateWithLeeway(jose.Expected{
+-		Time:     v.t,
+-		Issuer:   v.issuer,
+-		Audience: jose.Audience{v.audience},
++		Time:        v.t,
++		Issuer:      v.issuer,
++		AnyAudience: jose.Audience{v.audience},
+ 	}, 1*time.Minute); err != nil {
+ 		return nil, nil, fmt.Errorf("failed validation: %w", err)
+ 	}
+@@ -724,8 +724,8 @@ func parseAndVerifyWireAccessToken(v wireVerifyParams) (*wireAccessToken, *wireD
+ 	}
+ 
+ 	if err := wireDpop.ValidateWithLeeway(jose.Expected{
+-		Time:     v.t,
+-		Audience: jose.Audience{v.audience},
++		Time:        v.t,
++		AnyAudience: jose.Audience{v.audience},
+ 	}, 1*time.Minute); err != nil {
+ 		return nil, nil, fmt.Errorf("failed DPoP validation: %w", err)
+ 	}
+diff --git a/authority/provisioner/aws.go b/authority/provisioner/aws.go
+index e3e1280..df4c141 100644
+--- a/authority/provisioner/aws.go
++++ b/authority/provisioner/aws.go
+@@ -291,7 +291,7 @@ func (p *AWS) GetIdentityToken(subject, caURL string) (string, error) {
+ 		},
+ 	}
+ 
+-	tok, err := jose.Signed(signer).Claims(payload).CompactSerialize()
++	tok, err := jose.Signed(signer).Claims(payload).Serialize()
+ 	if err != nil {
+ 		return "", errors.Wrap(err, "error serializing token")
+ 	}
+diff --git a/authority/provisioner/azure.go b/authority/provisioner/azure.go
+index eeac24d..29798d8 100644
+--- a/authority/provisioner/azure.go
++++ b/authority/provisioner/azure.go
+@@ -291,9 +291,9 @@ func (p *Azure) authorizeToken(token string) (*azurePayload, string, string, str
+ 	}
+ 
+ 	if err := claims.ValidateWithLeeway(jose.Expected{
+-		Audience: []string{p.Audience},
+-		Issuer:   p.oidcConfig.Issuer,
+-		Time:     time.Now(),
++		AnyAudience: []string{p.Audience},
++		Issuer:      p.oidcConfig.Issuer,
++		Time:        time.Now(),
+ 	}, 1*time.Minute); err != nil {
+ 		return nil, "", "", "", "", errs.Wrap(http.StatusUnauthorized, err, "azure.authorizeToken; failed to validate azure token payload")
+ 	}
+diff --git a/authority/provisioner/azure_test.go b/authority/provisioner/azure_test.go
+index a38e475..5747a81 100644
+--- a/authority/provisioner/azure_test.go
++++ b/authority/provisioner/azure_test.go
+@@ -344,7 +344,7 @@ func TestAzure_authorizeToken(t *testing.T) {
+ 				Version:          "the-version",
+ 				XMSMirID:         "foo",
+ 			}
+-			tok, err := jose.Signed(sig).Claims(claims).CompactSerialize()
++			tok, err := jose.Signed(sig).Claims(claims).Serialize()
+ 			assert.FatalError(t, err)
+ 			return test{
+ 				p:     p,
+diff --git a/authority/provisioner/nebula_test.go b/authority/provisioner/nebula_test.go
+index 0a1c1e0..1f98b13 100644
+--- a/authority/provisioner/nebula_test.go
++++ b/authority/provisioner/nebula_test.go
+@@ -241,7 +241,7 @@ func mustNebulaToken(t *testing.T, sub, iss, aud string, iat time.Time, sans []s
+ 		},
+ 		SANS: sans,
+ 	}
+-	tok, err := jose.Signed(sig).Claims(claims).CompactSerialize()
++	tok, err := jose.Signed(sig).Claims(claims).Serialize()
+ 	require.NoError(t, err)
+ 
+ 	return tok
+@@ -282,7 +282,7 @@ func mustNebulaSSHToken(t *testing.T, sub, iss, aud string, iat time.Time, opts
+ 		}
+ 	}
+ 
+-	tok, err := jose.Signed(sig).Claims(claims).CompactSerialize()
++	tok, err := jose.Signed(sig).Claims(claims).Serialize()
+ 	require.NoError(t, err)
+ 
+ 	return tok
+diff --git a/authority/provisioner/oidc.go b/authority/provisioner/oidc.go
+index 8f85f04..220bec8 100644
+--- a/authority/provisioner/oidc.go
++++ b/authority/provisioner/oidc.go
+@@ -214,9 +214,9 @@ func (o *OIDC) ValidatePayload(p openIDPayload) error {
+ 	// According to "rfc7519 JSON Web Token" acceptable skew should be no more
+ 	// than a few minutes.
+ 	if err := p.ValidateWithLeeway(jose.Expected{
+-		Issuer:   o.configuration.Issuer,
+-		Audience: jose.Audience{o.ClientID},
+-		Time:     time.Now().UTC(),
++		Issuer:      o.configuration.Issuer,
++		AnyAudience: jose.Audience{o.ClientID},
++		Time:        time.Now().UTC(),
+ 	}, time.Minute); err != nil {
+ 		return errs.Wrap(http.StatusUnauthorized, err, "validatePayload: failed to validate oidc token payload")
+ 	}
+diff --git a/authority/provisioner/oidc_test.go b/authority/provisioner/oidc_test.go
+index 2c3e060..45c6a03 100644
+--- a/authority/provisioner/oidc_test.go
++++ b/authority/provisioner/oidc_test.go
+@@ -247,7 +247,7 @@ func TestOIDC_authorizeToken(t *testing.T) {
+ 		{"ok no email", p3, args{t5}, http.StatusOK, issuer, nil},
+ 		{"fail-domain", p3, args{failDomain}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken: validatePayload: failed to validate oidc token payload: email "name@example.com" is not allowed`)},
+ 		{"fail-key", p1, args{failKey}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken; cannot validate oidc token`)},
+-		{"fail-token", p1, args{failTok}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken; error parsing oidc token: invalid character '~' looking for beginning of value`)},
++		{"fail-token", p1, args{failTok}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken; error parsing oidc token: go-jose/go-jose: invalid protected header`)},
+ 		{"fail-claims", p1, args{failClaims}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken; error parsing oidc token claims: invalid character '~' looking for beginning of value`)},
+ 		{"fail-issuer", p1, args{failIss}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken: validatePayload: failed to validate oidc token payload: go-jose/go-jose/jwt: validation failed, invalid issuer claim (iss)`)},
+ 		{"fail-audience", p1, args{failAud}, http.StatusUnauthorized, "", errors.New(`oidc.AuthorizeToken: validatePayload: failed to validate oidc token payload: go-jose/go-jose/jwt: validation failed, invalid audience claim (aud)`)},
+diff --git a/authority/provisioner/provisioner_test.go b/authority/provisioner/provisioner_test.go
+index 880c53c..b053f29 100644
+--- a/authority/provisioner/provisioner_test.go
++++ b/authority/provisioner/provisioner_test.go
+@@ -6,10 +6,11 @@ import (
+ 	"net/http"
+ 	"testing"
+ 
+-	"github.com/go-jose/go-jose/v3"
+-	"github.com/smallstep/certificates/api/render"
+ 	"github.com/stretchr/testify/assert"
++	"go.step.sm/crypto/jose"
+ 	"golang.org/x/crypto/ssh"
++
++	"github.com/smallstep/certificates/api/render"
+ )
+ 
+ func TestType_String(t *testing.T) {
+diff --git a/authority/provisioner/utils_test.go b/authority/provisioner/utils_test.go
+index aac7ddc..276a756 100644
+--- a/authority/provisioner/utils_test.go
++++ b/authority/provisioner/utils_test.go
+@@ -767,7 +767,7 @@ func generateToken(sub, iss, aud, email string, sans []string, iat time.Time, jw
+ 		Email: email,
+ 		SANS:  sans,
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func generateCustomToken(sub, iss, aud string, jwk *jose.JSONWebKey, extraHeaders, extraClaims map[string]any) (string, error) {
+@@ -798,7 +798,7 @@ func generateCustomToken(sub, iss, aud string, jwk *jose.JSONWebKey, extraHeader
+ 		Expiry:    jose.NewNumericDate(iat.Add(5 * time.Minute)),
+ 		Audience:  []string{aud},
+ 	}
+-	return jose.Signed(sig).Claims(claims).Claims(extraClaims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Claims(extraClaims).Serialize()
+ }
+ 
+ func generateOIDCToken(sub, iss, aud, email, preferredUsername string, iat time.Time, jwk *jose.JSONWebKey, tokOpts ...tokOption) (string, error) {
+@@ -839,7 +839,7 @@ func generateOIDCToken(sub, iss, aud, email, preferredUsername string, iat time.
+ 		Email:             email,
+ 		PreferredUsername: preferredUsername,
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func generateX5CSSHToken(jwk *jose.JSONWebKey, claims *x5cPayload, tokOpts ...tokOption) (string, error) {
+@@ -857,7 +857,7 @@ func generateX5CSSHToken(jwk *jose.JSONWebKey, claims *x5cPayload, tokOpts ...to
+ 	if err != nil {
+ 		return "", err
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func getK8sSAPayload() *k8sSAPayload {
+@@ -891,7 +891,7 @@ func generateK8sSAToken(jwk *jose.JSONWebKey, claims *k8sSAPayload, tokOpts ...t
+ 	if claims == nil {
+ 		claims = getK8sSAPayload()
+ 	}
+-	return jose.Signed(sig).Claims(*claims).CompactSerialize()
++	return jose.Signed(sig).Claims(*claims).Serialize()
+ }
+ 
+ func generateSimpleSSHUserToken(iss, aud string, jwk *jose.JSONWebKey) (string, error) {
+@@ -939,7 +939,7 @@ func generateSSHToken(sub, iss, aud string, iat time.Time, sshOpts *SignSSHOptio
+ 			SSH: sshOpts,
+ 		},
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func generateGCPToken(sub, iss, aud, instanceID, instanceName, projectID, zone string, iat time.Time, jwk *jose.JSONWebKey) (string, error) {
+@@ -977,7 +977,7 @@ func generateGCPToken(sub, iss, aud, instanceID, instanceName, projectID, zone s
+ 			},
+ 		},
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func generateAWSToken(p *AWS, sub, iss, aud, accountID, instanceID, privateIP, region string, iat time.Time, key crypto.Signer) (string, error) {
+@@ -1034,7 +1034,7 @@ func generateAWSToken(p *AWS, sub, iss, aud, accountID, instanceID, privateIP, r
+ 			Signature: signature,
+ 		},
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func generateAzureToken(sub, iss, aud, tenantID, subscriptionID, resourceGroup, resourceName, resourceType string, iat time.Time, jwk *jose.JSONWebKey) (string, error) {
+@@ -1072,7 +1072,7 @@ func generateAzureToken(sub, iss, aud, tenantID, subscriptionID, resourceGroup,
+ 		Version:          "the-version",
+ 		XMSMirID:         xmsMirID,
+ 	}
+-	return jose.Signed(sig).Claims(claims).CompactSerialize()
++	return jose.Signed(sig).Claims(claims).Serialize()
+ }
+ 
+ func parseToken(token string) (*jose.JSONWebToken, *jose.Claims, error) {
+diff --git a/cas/stepcas/jwk_issuer.go b/cas/stepcas/jwk_issuer.go
+index ab16db3..4ca16b7 100644
+--- a/cas/stepcas/jwk_issuer.go
++++ b/cas/stepcas/jwk_issuer.go
+@@ -95,7 +95,7 @@ func (i *jwkIssuer) createToken(aud, sub string, sans []string, info *raInfo) (s
+ 		})
+ 	}
+ 
+-	tok, err := builder.CompactSerialize()
++	tok, err := builder.Serialize()
+ 	if err != nil {
+ 		return "", errors.Wrap(err, "error signing token")
+ 	}
+diff --git a/cas/stepcas/x5c_issuer.go b/cas/stepcas/x5c_issuer.go
+index 4fb8f6c..fe57739 100644
+--- a/cas/stepcas/x5c_issuer.go
++++ b/cas/stepcas/x5c_issuer.go
+@@ -102,7 +102,7 @@ func (i *x5cIssuer) createToken(aud, sub string, sans []string, info *raInfo) (s
+ 		})
+ 	}
+ 
+-	tok, err := builder.CompactSerialize()
++	tok, err := builder.Serialize()
+ 	if err != nil {
+ 		return "", errors.Wrap(err, "error signing token")
+ 	}
