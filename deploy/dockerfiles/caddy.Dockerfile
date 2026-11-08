@@ -9,7 +9,7 @@ RUN git init . \
 COPY deploy/patches/certificates-jose-v4.patch /tmp/certificates-jose-v4.patch
 # Backport the upstream JOSE v4 API migration until certificates has a tagged release.
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
-    go get golang.org/x/net@v0.62.0 go.step.sm/crypto@v0.92.0 \
+    go get golang.org/x/net@v0.62.0 go.step.sm/crypto@v0.92.0 github.com/klauspost/compress@v1.20.2 \
  && go mod download github.com/smallstep/certificates@v0.30.2 \
  && mkdir -p third_party \
  && cp -a /go/pkg/mod/github.com/smallstep/certificates@v0.30.2 third_party/certificates \
